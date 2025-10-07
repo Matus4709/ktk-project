@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QMessageBox, QApplication)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from utils.crypto_utils import decrypt_text
+from utils.caesar_cipher import caesar_decrypt
 
 
 class DecryptTextWindow(QMainWindow):
@@ -26,6 +26,7 @@ class DecryptTextWindow(QMainWindow):
         self.setWindowTitle("Deszyfrowanie Tekstu")
         self.setGeometry(250, 250, 600, 500)
         self.setMinimumSize(500, 400)
+        self.showMaximized()
         
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -71,27 +72,28 @@ class DecryptTextWindow(QMainWindow):
         """)
         layout.addWidget(self.text_input)
         
-        # Pole na hasło/klucz
-        key_label = QLabel("Hasło lub klucz:")
-        key_label.setFont(QFont("Arial", 12, QFont.Bold))
-        layout.addWidget(key_label)
+        # Pole przesunięcia
+        shift_label = QLabel("Przesunięcie (1-25):")
+        shift_label.setFont(QFont("Arial", 12, QFont.Bold))
+        layout.addWidget(shift_label)
         
-        self.key_input = QLineEdit()
-        self.key_input.setPlaceholderText("Wprowadź hasło lub klucz do deszyfrowania")
-        self.key_input.setEchoMode(QLineEdit.Password)
-        self.key_input.setStyleSheet("""
+        self.shift_input = QLineEdit()
+        self.shift_input.setPlaceholderText("Wprowadź przesunięcie (1-25)")
+        self.shift_input.setText("3")
+        self.shift_input.setStyleSheet("""
             QLineEdit {
                 border: 2px solid #bdc3c7;
                 border-radius: 8px;
                 padding: 10px;
                 font-size: 12px;
                 background: white;
+                max-width: 150px;
             }
             QLineEdit:focus {
                 border-color: #3498db;
             }
         """)
-        layout.addWidget(self.key_input)
+        layout.addWidget(self.shift_input)
         
         # Przyciski
         buttons_layout = QHBoxLayout()
@@ -209,32 +211,35 @@ class DecryptTextWindow(QMainWindow):
         """)
         
     def decrypt_text(self):
-        """Deszyfruje wprowadzony tekst"""
+        """Deszyfruje wprowadzony tekst szyfrem Cezara"""
         text = self.text_input.toPlainText().strip()
         if not text:
             QMessageBox.warning(self, "Błąd", "Wprowadź zaszyfrowany tekst!")
             return
             
-        key = self.key_input.text().strip()
-        if not key:
-            QMessageBox.warning(self, "Błąd", "Wprowadź hasło lub klucz!")
-            return
-            
         try:
-            decrypted_text = decrypt_text(text, key)
+            shift = int(self.shift_input.text().strip())
+            if shift < 1 or shift > 25:
+                QMessageBox.warning(self, "Błąd", "Przesunięcie musi być liczbą od 1 do 25!")
+                return
+                
+            decrypted_text = caesar_decrypt(text, shift)
             
             # Wyświetl odszyfrowany tekst
             self.result_output.setPlainText(decrypted_text)
             
-            QMessageBox.information(self, "Sukces", "Tekst został odszyfrowany pomyślnie!")
+            QMessageBox.information(self, "Sukces", 
+                f"Tekst został odszyfrowany szyfrem Cezara z przesunięciem {shift}!")
             
+        except ValueError:
+            QMessageBox.warning(self, "Błąd", "Przesunięcie musi być liczbą całkowitą!")
         except Exception as e:
             QMessageBox.critical(self, "Błąd", f"Wystąpił błąd podczas deszyfrowania: {str(e)}")
             
     def clear_fields(self):
         """Czyści wszystkie pola"""
         self.text_input.clear()
-        self.key_input.clear()
+        self.shift_input.setText("3")
         self.result_output.clear()
         
     def copy_result(self):
@@ -252,3 +257,4 @@ class DecryptTextWindow(QMainWindow):
         if self.parent:
             self.parent.show()
         self.close()
+

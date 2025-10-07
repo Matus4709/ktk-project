@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QLabel, QFrame)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
+from utils.logger import app_logger
 
 
 class ChoiceWindow(QMainWindow):
@@ -26,6 +27,7 @@ class ChoiceWindow(QMainWindow):
         self.setWindowTitle(f"{operation_name} - Wybór typu")
         self.setGeometry(150, 150, 500, 400)
         self.setMinimumSize(400, 300)
+        self.showMaximized()
         
         # Centralny widget
         central_widget = QWidget()
@@ -61,7 +63,7 @@ class ChoiceWindow(QMainWindow):
             QFrame {
                 background: white;
                 border-radius: 15px;
-                border: 2px solid #bdc3c7;
+             
             }
         """)
         options_layout = QVBoxLayout(options_frame)
@@ -176,27 +178,21 @@ class ChoiceWindow(QMainWindow):
         """)
         
     def open_text_window(self):
-        """Otwiera okno szyfrowania/deszyfrowania tekstu"""
-        if self.operation_type == "encrypt":
-            from .encrypt_text import EncryptTextWindow
-            self.text_window = EncryptTextWindow(self)
-        else:
-            from .decrypt_text import DecryptTextWindow
-            self.text_window = DecryptTextWindow(self)
-        
-        self.text_window.show()
+        """Otwiera okno wyboru szyfru dla tekstu"""
+        app_logger.log_user_action(f"wybrano {self.operation_type} tekstu")
+        app_logger.log_window_open("CipherChoiceWindow (tekst)")
+        from .cipher_choice_window import CipherChoiceWindow
+        self.cipher_choice_window = CipherChoiceWindow(self, self.operation_type, "text")
+        self.cipher_choice_window.show()
         self.hide()
         
     def open_file_window(self):
-        """Otwiera okno szyfrowania/deszyfrowania pliku"""
-        if self.operation_type == "encrypt":
-            from .encrypt_file import EncryptFileWindow
-            self.file_window = EncryptFileWindow(self)
-        else:
-            from .decrypt_file import DecryptFileWindow
-            self.file_window = DecryptFileWindow(self)
-        
-        self.file_window.show()
+        """Otwiera okno wyboru szyfru dla pliku"""
+        app_logger.log_user_action(f"wybrano {self.operation_type} pliku")
+        app_logger.log_window_open("CipherChoiceWindow (plik)")
+        from .cipher_choice_window import CipherChoiceWindow
+        self.cipher_choice_window = CipherChoiceWindow(self, self.operation_type, "file")
+        self.cipher_choice_window.show()
         self.hide()
         
     def go_back(self):
@@ -204,3 +200,4 @@ class ChoiceWindow(QMainWindow):
         if self.parent:
             self.parent.show()
         self.close()
+

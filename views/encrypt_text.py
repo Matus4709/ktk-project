@@ -9,7 +9,8 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QMessageBox, QApplication)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from utils.crypto_utils import encrypt_text
+from utils.caesar_cipher import caesar_encrypt
+from utils.logger import app_logger
 
 
 class EncryptTextWindow(QMainWindow):
@@ -18,6 +19,7 @@ class EncryptTextWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
+        app_logger.log_window_open("EncryptTextWindow")
         self.init_ui()
         self.setup_styles()
         
@@ -26,6 +28,7 @@ class EncryptTextWindow(QMainWindow):
         self.setWindowTitle("Szyfrowanie Tekstu")
         self.setGeometry(200, 200, 600, 500)
         self.setMinimumSize(500, 400)
+        self.showMaximized()
         
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -71,27 +74,28 @@ class EncryptTextWindow(QMainWindow):
         """)
         layout.addWidget(self.text_input)
         
-        # Pole na hasło
-        password_label = QLabel("Hasło (opcjonalne):")
-        password_label.setFont(QFont("Arial", 12, QFont.Bold))
-        layout.addWidget(password_label)
+        # Pole przesunięcia
+        shift_label = QLabel("Przesunięcie (1-25):")
+        shift_label.setFont(QFont("Arial", 12, QFont.Bold))
+        layout.addWidget(shift_label)
         
-        self.password_input = QLineEdit()
-        self.password_input.setPlaceholderText("Wprowadź hasło (opcjonalne)")
-        self.password_input.setEchoMode(QLineEdit.Password)
-        self.password_input.setStyleSheet("""
+        self.shift_input = QLineEdit()
+        self.shift_input.setPlaceholderText("Wprowadź przesunięcie (1-25)")
+        self.shift_input.setText("3")
+        self.shift_input.setStyleSheet("""
             QLineEdit {
                 border: 2px solid #bdc3c7;
                 border-radius: 8px;
                 padding: 10px;
                 font-size: 12px;
                 background: white;
+                max-width: 150px;
             }
             QLineEdit:focus {
                 border-color: #3498db;
             }
         """)
-        layout.addWidget(self.password_input)
+        layout.addWidget(self.shift_input)
         
         # Przyciski
         buttons_layout = QHBoxLayout()
@@ -209,35 +213,41 @@ class EncryptTextWindow(QMainWindow):
         """)
         
     def encrypt_text(self):
-        """Szyfruje wprowadzony tekst"""
+        """Szyfruje wprowadzony tekst szyfrem Cezara"""
         text = self.text_input.toPlainText().strip()
         if not text:
+            app_logger.log_validation_error("tekst", "pusty tekst")
             QMessageBox.warning(self, "Błąd", "Wprowadź tekst do szyfrowania!")
             return
             
         try:
-            password = self.password_input.text().strip()
-            encrypted_text, key = encrypt_text(text, password if password else None)
+            shift = int(self.shift_input.text().strip())
+            if shift < 1 or shift > 25:
+                app_logger.log_validation_error("przesunięcie", f"poza zakresem: {shift}")
+                QMessageBox.warning(self, "Błąd", "Przesunięcie musi być liczbą od 1 do 25!")
+                return
+                
+            app_logger.log_encryption_start("tekst", shift)
+            encrypted_text = caesar_encrypt(text, shift)
+            app_logger.log_encryption_success("tekst", len(encrypted_text))
             
             # Wyświetl zaszyfrowany tekst
             self.result_output.setPlainText(encrypted_text)
             
-            # Zapisz klucz do schowka jeśli nie było hasła
-            if not password:
-                clipboard = QApplication.clipboard()
-                clipboard.setText(f"Klucz: {key}")
-                QMessageBox.information(self, "Sukces", 
-                    "Tekst został zaszyfrowany pomyślnie!\nKlucz został skopiowany do schowka.")
-            else:
-                QMessageBox.information(self, "Sukces", "Tekst został zaszyfrowany pomyślnie!")
+            QMessageBox.information(self, "Sukces", 
+                f"Tekst został zaszyfrowany szyfrem Cezara z przesunięciem {shift}!")
             
+        except ValueError:
+            app_logger.log_validation_error("przesunięcie", "nieprawidłowy format")
+            QMessageBox.warning(self, "Błąd", "Przesunięcie musi być liczbą całkowitą!")
         except Exception as e:
+            app_logger.log_error("szyfrowanie tekstu", str(e))
             QMessageBox.critical(self, "Błąd", f"Wystąpił błąd podczas szyfrowania: {str(e)}")
             
     def clear_fields(self):
         """Czyści wszystkie pola"""
         self.text_input.clear()
-        self.password_input.clear()
+        self.shift_input.setText("3")
         self.result_output.clear()
         
     def copy_result(self):
@@ -255,3 +265,4 @@ class EncryptTextWindow(QMainWindow):
         if self.parent:
             self.parent.show()
         self.close()
+

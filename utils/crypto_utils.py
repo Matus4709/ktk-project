@@ -108,3 +108,4 @@ def decrypt_file(file_path: str, output_path: str, key: str) -> tuple:
         return True, None
     except Exception as e:
         return False, str(e)
+

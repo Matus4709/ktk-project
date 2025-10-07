@@ -7,10 +7,12 @@ Okno szyfrowania pliku
 import os
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QLineEdit, QFileDialog, 
-                             QMessageBox, QApplication, QTextEdit)
+                             QMessageBox, QApplication, QTextEdit, QComboBox,
+                             QGroupBox, QGridLayout)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from utils.crypto_utils import encrypt_file
+from utils.caesar_cipher import caesar_encrypt_file
+from utils.logger import app_logger
 
 
 class EncryptFileWindow(QMainWindow):
@@ -19,21 +21,23 @@ class EncryptFileWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
+        app_logger.log_window_open("EncryptFileWindow")
         self.init_ui()
         self.setup_styles()
         
     def init_ui(self):
         """Inicjalizacja interfejsu okna szyfrowania pliku"""
         self.setWindowTitle("Szyfrowanie Pliku")
-        self.setGeometry(200, 200, 600, 500)
-        self.setMinimumSize(500, 400)
+        self.setGeometry(200, 200, 700, 600)
+        self.setMinimumSize(600, 500)
+        self.showMaximized()
         
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
         layout = QVBoxLayout(central_widget)
-        layout.setSpacing(15)
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
+        layout.setContentsMargins(30, 30, 30, 30)
         
         # Tytuł
         title = QLabel("🔒 Szyfrowanie Pliku")
@@ -50,12 +54,32 @@ class EncryptFileWindow(QMainWindow):
         """)
         layout.addWidget(title)
         
-        # Wybór pliku do szyfrowania
-        file_label = QLabel("Plik do szyfrowania:")
-        file_label.setFont(QFont("Arial", 12, QFont.Bold))
-        layout.addWidget(file_label)
+        # Sekcja wyboru pliku
+        file_group = QGroupBox("📁 Wybór pliku")
+        file_group.setFont(QFont("Arial", 12, QFont.Bold))
+        file_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                border: 2px solid #bdc3c7;
+                border-radius: 10px;
+                margin-top: 10px;
+                padding-top: 10px;
+                background: white;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+            }
+        """)
+        file_layout = QVBoxLayout(file_group)
+        file_layout.setSpacing(10)
         
-        file_layout = QHBoxLayout()
+        file_label = QLabel("Plik do szyfrowania:")
+        file_label.setFont(QFont("Arial", 11, QFont.Bold))
+        file_layout.addWidget(file_label)
+        
+        file_input_layout = QHBoxLayout()
         
         self.file_input = QLineEdit()
         self.file_input.setPlaceholderText("Wybierz plik do szyfrowania...")
@@ -69,7 +93,7 @@ class EncryptFileWindow(QMainWindow):
                 background: white;
             }
         """)
-        file_layout.addWidget(self.file_input)
+        file_input_layout.addWidget(self.file_input)
         
         self.browse_btn = QPushButton("📁 Przeglądaj")
         self.browse_btn.setMinimumSize(120, 40)
@@ -89,34 +113,82 @@ class EncryptFileWindow(QMainWindow):
             }
         """)
         self.browse_btn.clicked.connect(self.browse_file)
-        file_layout.addWidget(self.browse_btn)
+        file_input_layout.addWidget(self.browse_btn)
         
-        layout.addLayout(file_layout)
+        file_layout.addLayout(file_input_layout)
+        layout.addWidget(file_group)
         
-        # Pole na hasło
-        password_label = QLabel("Hasło (opcjonalne):")
-        password_label.setFont(QFont("Arial", 12, QFont.Bold))
-        layout.addWidget(password_label)
+        # Sekcja opcji szyfru Cezara
+        cipher_group = QGroupBox("🔤 Opcje szyfru Cezara")
+        cipher_group.setFont(QFont("Arial", 12, QFont.Bold))
+        cipher_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                border: 2px solid #bdc3c7;
+                border-radius: 10px;
+                margin-top: 10px;
+                padding-top: 10px;
+                background: white;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+            }
+        """)
+        cipher_layout = QVBoxLayout(cipher_group)
+        cipher_layout.setSpacing(10)
         
-        self.password_input = QLineEdit()
-        self.password_input.setPlaceholderText("Wprowadź hasło (opcjonalne)")
-        self.password_input.setEchoMode(QLineEdit.Password)
-        self.password_input.setStyleSheet("""
+        shift_label = QLabel("Przesunięcie (1-25):")
+        shift_label.setFont(QFont("Arial", 11, QFont.Bold))
+        cipher_layout.addWidget(shift_label)
+        
+        shift_layout = QHBoxLayout()
+        self.shift_input = QLineEdit()
+        self.shift_input.setPlaceholderText("Wprowadź przesunięcie (1-25)")
+        self.shift_input.setText("3")
+        self.shift_input.setStyleSheet("""
             QLineEdit {
                 border: 2px solid #bdc3c7;
                 border-radius: 8px;
-                padding: 10px;
-                font-size: 12px;
+                padding: 8px;
+                font-size: 11px;
                 background: white;
+                max-width: 150px;
             }
             QLineEdit:focus {
                 border-color: #3498db;
             }
         """)
-        layout.addWidget(self.password_input)
+        shift_layout.addWidget(self.shift_input)
+        shift_layout.addStretch()
+        cipher_layout.addLayout(shift_layout)
+        
+        layout.addWidget(cipher_group)
         
         # Przyciski
         buttons_layout = QHBoxLayout()
+        buttons_layout.setSpacing(15)
+        
+        self.preview_btn = QPushButton("👁️ Podgląd")
+        self.preview_btn.setMinimumSize(120, 40)
+        self.preview_btn.setFont(QFont("Arial", 12, QFont.Bold))
+        self.preview_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #f39c12, stop:1 #e67e22);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 10px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #e67e22, stop:1 #d35400);
+            }
+        """)
+        self.preview_btn.clicked.connect(self.preview_encryption)
+        buttons_layout.addWidget(self.preview_btn)
         
         self.encrypt_btn = QPushButton("🔒 Szyfruj plik")
         self.encrypt_btn.setMinimumSize(150, 40)
@@ -160,26 +232,53 @@ class EncryptFileWindow(QMainWindow):
         
         layout.addLayout(buttons_layout)
         
-        # Wynik szyfrowania
+        # Sekcja wyników
+        result_group = QGroupBox("📊 Wynik")
+        result_group.setFont(QFont("Arial", 12, QFont.Bold))
+        result_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                border: 2px solid #bdc3c7;
+                border-radius: 10px;
+                margin-top: 10px;
+                padding-top: 10px;
+                background: white;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+            }
+        """)
+        result_layout = QVBoxLayout(result_group)
+        result_layout.setSpacing(10)
+        
         result_label = QLabel("Informacje o szyfrowaniu:")
-        result_label.setFont(QFont("Arial", 12, QFont.Bold))
-        layout.addWidget(result_label)
+        result_label.setFont(QFont("Arial", 11, QFont.Bold))
+        result_layout.addWidget(result_label)
         
         self.result_output = QTextEdit()
         self.result_output.setReadOnly(True)
-        self.result_output.setMaximumHeight(120)
+        self.result_output.setMinimumHeight(200)
+        self.result_output.setMaximumHeight(300)
         self.result_output.setStyleSheet("""
             QTextEdit {
                 border: 2px solid #27ae60;
                 border-radius: 8px;
-                padding: 10px;
+                padding: 15px;
                 font-size: 12px;
                 background: #f8f9fa;
+                line-height: 1.4;
             }
         """)
-        layout.addWidget(self.result_output)
+        result_layout.addWidget(self.result_output)
+        
+        layout.addWidget(result_group)
         
         # Przycisk powrotu
+        back_layout = QHBoxLayout()
+        back_layout.addStretch()
+        
         self.back_btn = QPushButton("⬅️ Powrót")
         self.back_btn.setMinimumSize(120, 40)
         self.back_btn.setFont(QFont("Arial", 12, QFont.Bold))
@@ -198,7 +297,9 @@ class EncryptFileWindow(QMainWindow):
             }
         """)
         self.back_btn.clicked.connect(self.go_back)
-        layout.addWidget(self.back_btn)
+        back_layout.addWidget(self.back_btn)
+        
+        layout.addLayout(back_layout)
         
     def setup_styles(self):
         """Ustawienie stylów okna szyfrowania pliku"""
@@ -220,18 +321,81 @@ class EncryptFileWindow(QMainWindow):
         if file_path:
             self.file_input.setText(file_path)
             
-    def encrypt_file(self):
-        """Szyfruje wybrany plik"""
+    def preview_encryption(self):
+        """Pokazuje podgląd szyfrowania pliku"""
         file_path = self.file_input.text().strip()
         if not file_path:
+            app_logger.log_validation_error("plik", "nie wybrano pliku")
             QMessageBox.warning(self, "Błąd", "Wybierz plik do szyfrowania!")
             return
             
         if not os.path.exists(file_path):
+            app_logger.log_validation_error("plik", f"plik nie istnieje: {file_path}")
             QMessageBox.warning(self, "Błąd", "Wybrany plik nie istnieje!")
             return
             
         try:
+            shift = int(self.shift_input.text().strip())
+            if shift < 1 or shift > 25:
+                app_logger.log_validation_error("przesunięcie", f"poza zakresem: {shift}")
+                QMessageBox.warning(self, "Błąd", "Przesunięcie musi być liczbą od 1 do 25!")
+                return
+                
+            app_logger.log_preview("szyfrowania", file_path, shift)
+            
+            # Wczytaj początek pliku do podglądu
+            with open(file_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+            
+            # Ogranicz do pierwszych 500 znaków dla podglądu
+            preview_content = content[:500]
+            if len(content) > 500:
+                preview_content += "\n... (plik jest dłuższy)"
+            
+            # Zaszyfruj podgląd
+            from utils.caesar_cipher import caesar_encrypt
+            encrypted_preview = caesar_encrypt(preview_content, shift)
+            
+            # Wyświetl podgląd
+            self.result_output.setPlainText(
+                f"👁️ PODGLĄD SZYFROWANIA PLIKU\n\n"
+                f"📁 Plik: {os.path.basename(file_path)}\n"
+                f"🔢 Przesunięcie: {shift}\n"
+                f"📏 Rozmiar pliku: {len(content)} znaków\n\n"
+                f"📝 Oryginalny tekst (pierwsze 500 znaków):\n"
+                f"{preview_content}\n\n"
+                f"🔒 Zaszyfrowany tekst:\n"
+                f"{encrypted_preview}\n\n"
+                f"💡 Kliknij 'Szyfruj plik' aby zapisać pełny zaszyfrowany plik"
+            )
+            
+        except ValueError:
+            app_logger.log_validation_error("przesunięcie", "nieprawidłowy format")
+            QMessageBox.warning(self, "Błąd", "Przesunięcie musi być liczbą całkowitą!")
+        except Exception as e:
+            app_logger.log_error("podgląd szyfrowania", str(e))
+            QMessageBox.critical(self, "Błąd", f"Wystąpił błąd podczas podglądu: {str(e)}")
+            
+    def encrypt_file(self):
+        """Szyfruje plik szyfrem Cezara"""
+        file_path = self.file_input.text().strip()
+        if not file_path:
+            app_logger.log_validation_error("plik", "nie wybrano pliku")
+            QMessageBox.warning(self, "Błąd", "Wybierz plik do szyfrowania!")
+            return
+            
+        if not os.path.exists(file_path):
+            app_logger.log_validation_error("plik", f"plik nie istnieje: {file_path}")
+            QMessageBox.warning(self, "Błąd", "Wybrany plik nie istnieje!")
+            return
+            
+        try:
+            shift = int(self.shift_input.text().strip())
+            if shift < 1 or shift > 25:
+                app_logger.log_validation_error("przesunięcie", f"poza zakresem: {shift}")
+                QMessageBox.warning(self, "Błąd", "Przesunięcie musi być liczbą od 1 do 25!")
+                return
+                
             # Wybierz lokalizację zapisu
             output_path, _ = QFileDialog.getSaveFileName(
                 self, 
@@ -241,37 +405,39 @@ class EncryptFileWindow(QMainWindow):
             )
             
             if not output_path:
+                app_logger.log_user_action("anulowano wybór lokalizacji zapisu")
                 return
                 
-            password = self.password_input.text().strip()
-            success, result = encrypt_file(file_path, output_path, password if password else None)
+            app_logger.log_file_operation("Szyfrowanie", file_path, shift)
+            success = caesar_encrypt_file(file_path, output_path, shift)
             
             if success:
+                app_logger.log_file_success("Szyfrowanie", file_path, output_path)
                 self.result_output.setPlainText(
-                    f"Plik został zaszyfrowany pomyślnie!\n"
-                    f"Oryginalny plik: {os.path.basename(file_path)}\n"
-                    f"Zaszyfrowany plik: {os.path.basename(output_path)}\n"
-                    f"Lokalizacja: {output_path}"
+                    f"🔒 SZYFROWANIE PLIKU ZAKOŃCZONE SUKCESEM!\n\n"
+                    f"📁 Oryginalny plik: {os.path.basename(file_path)}\n"
+                    f"🔐 Zaszyfrowany plik: {os.path.basename(output_path)}\n"
+                    f"🔢 Przesunięcie: {shift}\n"
+                    f"📍 Lokalizacja: {output_path}"
                 )
-                
-                if not password:
-                    # Zapisz klucz do schowka
-                    clipboard = QApplication.clipboard()
-                    clipboard.setText(f"Klucz: {result}")
-                    QMessageBox.information(self, "Sukces", 
-                        "Plik został zaszyfrowany pomyślnie!\nKlucz został skopiowany do schowka.")
-                else:
-                    QMessageBox.information(self, "Sukces", "Plik został zaszyfrowany pomyślnie!")
+                QMessageBox.information(self, "Sukces", 
+                    f"Plik został zaszyfrowany szyfrem Cezara z przesunięciem {shift}!\n"
+                    f"Zapisano jako: {os.path.basename(output_path)}")
             else:
-                QMessageBox.critical(self, "Błąd", f"Wystąpił błąd podczas szyfrowania: {result}")
+                app_logger.log_error("szyfrowanie pliku", "nie udało się zaszyfrować pliku")
+                QMessageBox.critical(self, "Błąd", "Wystąpił błąd podczas szyfrowania pliku!")
                 
+        except ValueError:
+            app_logger.log_validation_error("przesunięcie", "nieprawidłowy format")
+            QMessageBox.warning(self, "Błąd", "Przesunięcie musi być liczbą całkowitą!")
         except Exception as e:
+            app_logger.log_error("szyfrowanie pliku", str(e))
             QMessageBox.critical(self, "Błąd", f"Wystąpił błąd podczas szyfrowania: {str(e)}")
             
     def clear_fields(self):
         """Czyści wszystkie pola"""
         self.file_input.clear()
-        self.password_input.clear()
+        self.shift_input.setText("3")
         self.result_output.clear()
         
     def go_back(self):
