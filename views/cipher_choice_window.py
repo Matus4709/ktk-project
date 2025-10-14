@@ -5,7 +5,7 @@ Okno wyboru typu szyfrowania
 """
 
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-                             QPushButton, QLabel, QFrame)
+                             QPushButton, QLabel, QFrame, QGridLayout)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
@@ -66,19 +66,16 @@ class CipherChoiceWindow(QMainWindow):
             QFrame {
                 background: white;
                 border-radius: 15px;
-                
             }
         """)
-        options_layout = QVBoxLayout(options_frame)
-        options_layout.setSpacing(20)
+        options_layout = QGridLayout(options_frame)
+        options_layout.setSpacing(30)
         options_layout.setContentsMargins(40, 30, 40, 30)
         
-        # Opcja Szyfr Cezara
-        caesar_option_layout = QHBoxLayout()
-        
-        self.caesar_btn = QPushButton("🔤 Szyfr Cezara")
-        self.caesar_btn.setMinimumSize(200, 80)
-        self.caesar_btn.setFont(QFont("Arial", 14, QFont.Bold))
+        # Szyfr Cezara
+        self.caesar_btn = QPushButton("Szyfr Cezara")
+        self.caesar_btn.setMinimumSize(200, 150)
+        self.caesar_btn.setFont(QFont("Arial", 16, QFont.Bold))
         self.caesar_btn.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
@@ -86,11 +83,12 @@ class CipherChoiceWindow(QMainWindow):
                 color: white;
                 border: none;
                 border-radius: 15px;
-                padding: 15px;
+                padding: 20px;
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
                     stop:0 #229954, stop:1 #1e8449);
+                transform: scale(1.05);
             }
             QPushButton:pressed {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
@@ -98,15 +96,59 @@ class CipherChoiceWindow(QMainWindow):
             }
         """)
         self.caesar_btn.clicked.connect(self.open_caesar_window)
-        caesar_option_layout.addWidget(self.caesar_btn)
+        options_layout.addWidget(self.caesar_btn, 0, 0)
         
-        caesar_desc = QLabel("Klasyczny szyfr przesuwający - prosty i skuteczny")
-        caesar_desc.setFont(QFont("Arial", 10))
-        caesar_desc.setStyleSheet("QLabel { color: #7f8c8d; }")
-        caesar_desc.setWordWrap(True)
-        caesar_option_layout.addWidget(caesar_desc)
+        # Szyfr Vigenère
+        self.vigenere_btn = QPushButton("Szyfr Vigenère")
+        self.vigenere_btn.setMinimumSize(200, 150)
+        self.vigenere_btn.setFont(QFont("Arial", 16, QFont.Bold))
+        self.vigenere_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #9b59b6, stop:1 #8e44ad);
+                color: white;
+                border: none;
+                border-radius: 15px;
+                padding: 20px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #8e44ad, stop:1 #7d3c98);
+                transform: scale(1.05);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #7d3c98, stop:1 #6c3483);
+            }
+        """)
+        self.vigenere_btn.clicked.connect(self.open_vigenere_window)
+        options_layout.addWidget(self.vigenere_btn, 0, 1)
         
-        options_layout.addLayout(caesar_option_layout)
+        # Szyfr z kluczem bieżącym
+        self.stream_btn = QPushButton("Szyfr z kluczem\nbieżącym")
+        self.stream_btn.setMinimumSize(200, 150)
+        self.stream_btn.setFont(QFont("Arial", 16, QFont.Bold))
+        self.stream_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #e67e22, stop:1 #d35400);
+                color: white;
+                border: none;
+                border-radius: 15px;
+                padding: 20px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #d35400, stop:1 #ba4a00);
+                transform: scale(1.05);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #ba4a00, stop:1 #a04000);
+            }
+        """)
+        self.stream_btn.clicked.connect(self.open_stream_window)
+        options_layout.addWidget(self.stream_btn, 0, 2)
         
         # # Opcja AES (wkrótce)
         # aes_option_layout = QHBoxLayout()
@@ -223,6 +265,46 @@ class CipherChoiceWindow(QMainWindow):
             else:
                 from .decrypt_file import DecryptFileWindow
                 self.cipher_window = DecryptFileWindow(self)
+        
+        self.cipher_window.show()
+        self.hide()
+        
+    def open_vigenere_window(self):
+        """Otwiera okno szyfrowania/deszyfrowania szyfrem Vigenère"""
+        if self.data_type == "text":
+            if self.operation_type == "encrypt":
+                from .encrypt_text_vigenere import EncryptTextVigenereWindow
+                self.cipher_window = EncryptTextVigenereWindow(self)
+            else:
+                from .decrypt_text_vigenere import DecryptTextVigenereWindow
+                self.cipher_window = DecryptTextVigenereWindow(self)
+        else:  # file
+            if self.operation_type == "encrypt":
+                from .encrypt_file_vigenere import EncryptFileVigenereWindow
+                self.cipher_window = EncryptFileVigenereWindow(self)
+            else:
+                from .decrypt_file_vigenere import DecryptFileVigenereWindow
+                self.cipher_window = DecryptFileVigenereWindow(self)
+        
+        self.cipher_window.show()
+        self.hide()
+        
+    def open_stream_window(self):
+        """Otwiera okno szyfrowania/deszyfrowania szyfrem z kluczem bieżącym"""
+        if self.data_type == "text":
+            if self.operation_type == "encrypt":
+                from .encrypt_text_stream import EncryptTextStreamWindow
+                self.cipher_window = EncryptTextStreamWindow(self)
+            else:
+                from .decrypt_text_stream import DecryptTextStreamWindow
+                self.cipher_window = DecryptTextStreamWindow(self)
+        else:  # file
+            if self.operation_type == "encrypt":
+                from .encrypt_file_stream import EncryptFileStreamWindow
+                self.cipher_window = EncryptFileStreamWindow(self)
+            else:
+                from .decrypt_file_stream import DecryptFileStreamWindow
+                self.cipher_window = DecryptFileStreamWindow(self)
         
         self.cipher_window.show()
         self.hide()

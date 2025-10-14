@@ -1,33 +1,43 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Implementacja szyfru Cezara
+Implementacja szyfru Vigenère
 """
 
-def caesar_encrypt(text, shift):
+def vigenere_encrypt(text, key):
     """
-    Szyfruje tekst szyfrem Cezara
+    Szyfruje tekst szyfrem Vigenère
     
     Args:
         text: Tekst do szyfrowania
-        shift: Przesunięcie (1-25)
+        key: Klucz szyfrowania (tylko litery)
         
     Returns:
         str: Zaszyfrowany tekst
     """
-    if not isinstance(shift, int) or shift < 1 or shift > 25:
-        raise ValueError("Przesunięcie musi być liczbą całkowitą od 1 do 25")
+    if not key or not key.strip():
+        raise ValueError("Klucz nie może być pusty")
+    
+    # Oczyść klucz - tylko litery
+    clean_key = ''.join(c.upper() for c in key if c.isalpha())
+    if not clean_key:
+        raise ValueError("Klucz musi zawierać przynajmniej jedną literę")
     
     result = ""
+    key_index = 0
+    
     for char in text:
         if char.isalpha():
             # Określ czy to duża czy mała litera
             if char.isupper():
                 # Szyfruj duże litery
+                shift = ord(clean_key[key_index % len(clean_key)]) - ord('A')
                 result += chr((ord(char) - ord('A') + shift) % 26 + ord('A'))
             else:
                 # Szyfruj małe litery
+                shift = ord(clean_key[key_index % len(clean_key)]) - ord('A')
                 result += chr((ord(char) - ord('a') + shift) % 26 + ord('a'))
+            key_index += 1
         else:
             # Pozostaw znaki niealfabetyczne bez zmian
             result += char
@@ -35,30 +45,40 @@ def caesar_encrypt(text, shift):
     return result
 
 
-def caesar_decrypt(text, shift):
+def vigenere_decrypt(text, key):
     """
-    Deszyfruje tekst szyfrem Cezara
+    Deszyfruje tekst szyfrem Vigenère
     
     Args:
         text: Zaszyfrowany tekst
-        shift: Przesunięcie (1-25)
+        key: Klucz deszyfrowania (tylko litery)
         
     Returns:
         str: Odszyfrowany tekst
     """
-    if not isinstance(shift, int) or shift < 1 or shift > 25:
-        raise ValueError("Przesunięcie musi być liczbą całkowitą od 1 do 25")
+    if not key or not key.strip():
+        raise ValueError("Klucz nie może być pusty")
+    
+    # Oczyść klucz - tylko litery
+    clean_key = ''.join(c.upper() for c in key if c.isalpha())
+    if not clean_key:
+        raise ValueError("Klucz musi zawierać przynajmniej jedną literę")
     
     result = ""
+    key_index = 0
+    
     for char in text:
         if char.isalpha():
             # Określ czy to duża czy mała litera
             if char.isupper():
                 # Deszyfruj duże litery
+                shift = ord(clean_key[key_index % len(clean_key)]) - ord('A')
                 result += chr((ord(char) - ord('A') - shift) % 26 + ord('A'))
             else:
                 # Deszyfruj małe litery
+                shift = ord(clean_key[key_index % len(clean_key)]) - ord('A')
                 result += chr((ord(char) - ord('a') - shift) % 26 + ord('a'))
+            key_index += 1
         else:
             # Pozostaw znaki niealfabetyczne bez zmian
             result += char
@@ -66,14 +86,14 @@ def caesar_decrypt(text, shift):
     return result
 
 
-def caesar_encrypt_file(input_file, output_file, shift):
+def vigenere_encrypt_file(input_file, output_file, key):
     """
-    Szyfruje plik szyfrem Cezara
+    Szyfruje plik szyfrem Vigenère
     
     Args:
         input_file: Ścieżka do pliku wejściowego
         output_file: Ścieżka do pliku wyjściowego
-        shift: Przesunięcie (1-25)
+        key: Klucz szyfrowania
         
     Returns:
         bool: True jeśli sukces, False jeśli błąd
@@ -82,7 +102,7 @@ def caesar_encrypt_file(input_file, output_file, shift):
         with open(input_file, 'r', encoding='utf-8') as file:
             content = file.read()
         
-        encrypted_content = caesar_encrypt(content, shift)
+        encrypted_content = vigenere_encrypt(content, key)
         
         with open(output_file, 'w', encoding='utf-8') as file:
             file.write(encrypted_content)
@@ -93,14 +113,14 @@ def caesar_encrypt_file(input_file, output_file, shift):
         return False
 
 
-def caesar_decrypt_file(input_file, output_file, shift):
+def vigenere_decrypt_file(input_file, output_file, key):
     """
-    Deszyfruje plik szyfrem Cezara
+    Deszyfruje plik szyfrem Vigenère
     
     Args:
         input_file: Ścieżka do zaszyfrowanego pliku
         output_file: Ścieżka do pliku wyjściowego
-        shift: Przesunięcie (1-25)
+        key: Klucz deszyfrowania
         
     Returns:
         bool: True jeśli sukces, False jeśli błąd
@@ -109,7 +129,7 @@ def caesar_decrypt_file(input_file, output_file, shift):
         with open(input_file, 'r', encoding='utf-8') as file:
             content = file.read()
         
-        decrypted_content = caesar_decrypt(content, shift)
+        decrypted_content = vigenere_decrypt(content, key)
         
         with open(output_file, 'w', encoding='utf-8') as file:
             file.write(decrypted_content)
@@ -120,14 +140,14 @@ def caesar_decrypt_file(input_file, output_file, shift):
         return False
 
 
-def caesar_encrypt_binary_file(input_file, output_file, shift):
+def vigenere_encrypt_binary_file(input_file, output_file, key):
     """
-    Szyfruje plik binarny (PDF, obrazy, itp.) szyfrem Cezara na poziomie bajtów
+    Szyfruje plik binarny (PDF, obrazy, itp.) szyfrem Vigenère na poziomie bajtów
     
     Args:
         input_file: Ścieżka do pliku wejściowego
         output_file: Ścieżka do pliku wyjściowego
-        shift: Przesunięcie (1-25)
+        key: Klucz szyfrowania
         
     Returns:
         bool: True jeśli sukces, False jeśli błąd
@@ -136,12 +156,21 @@ def caesar_encrypt_binary_file(input_file, output_file, shift):
         with open(input_file, 'rb') as file:
             content = file.read()
         
+        # Oczyść klucz - tylko litery
+        clean_key = ''.join(c.upper() for c in key if c.isalpha())
+        if not clean_key:
+            raise ValueError("Klucz musi zawierać przynajmniej jedną literę")
+        
         # Szyfruj każdy bajt osobno
         encrypted_bytes = bytearray()
+        key_index = 0
+        
         for byte in content:
-            # Zastosuj przesunięcie modulo 256
+            # Zastosuj przesunięcie na podstawie klucza
+            shift = ord(clean_key[key_index % len(clean_key)]) - ord('A')
             encrypted_byte = (byte + shift) % 256
             encrypted_bytes.append(encrypted_byte)
+            key_index += 1
         
         with open(output_file, 'wb') as file:
             file.write(encrypted_bytes)
@@ -152,14 +181,14 @@ def caesar_encrypt_binary_file(input_file, output_file, shift):
         return False
 
 
-def caesar_decrypt_binary_file(input_file, output_file, shift):
+def vigenere_decrypt_binary_file(input_file, output_file, key):
     """
-    Deszyfruje plik binarny (PDF, obrazy, itp.) szyfrem Cezara na poziomie bajtów
+    Deszyfruje plik binarny (PDF, obrazy, itp.) szyfrem Vigenère na poziomie bajtów
     
     Args:
         input_file: Ścieżka do zaszyfrowanego pliku
         output_file: Ścieżka do pliku wyjściowego
-        shift: Przesunięcie (1-25)
+        key: Klucz deszyfrowania
         
     Returns:
         bool: True jeśli sukces, False jeśli błąd
@@ -168,12 +197,21 @@ def caesar_decrypt_binary_file(input_file, output_file, shift):
         with open(input_file, 'rb') as file:
             content = file.read()
         
+        # Oczyść klucz - tylko litery
+        clean_key = ''.join(c.upper() for c in key if c.isalpha())
+        if not clean_key:
+            raise ValueError("Klucz musi zawierać przynajmniej jedną literę")
+        
         # Deszyfruj każdy bajt osobno
         decrypted_bytes = bytearray()
+        key_index = 0
+        
         for byte in content:
-            # Zastosuj odwrotne przesunięcie modulo 256
+            # Zastosuj odwrotne przesunięcie na podstawie klucza
+            shift = ord(clean_key[key_index % len(clean_key)]) - ord('A')
             decrypted_byte = (byte - shift) % 256
             decrypted_bytes.append(decrypted_byte)
+            key_index += 1
         
         with open(output_file, 'wb') as file:
             file.write(decrypted_bytes)

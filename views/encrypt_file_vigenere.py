@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Okno deszyfrowania pliku
+Okno szyfrowania pliku szyfrem Vigenère
 """
 
 import os
@@ -11,15 +11,17 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QGroupBox, QGridLayout)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from utils.caesar_cipher import caesar_decrypt_file, caesar_decrypt_binary_file
+from utils.vigenere_cipher import vigenere_encrypt_file, vigenere_encrypt_binary_file, vigenere_encrypt
+from utils.logger import app_logger
 
 
-class DecryptFileWindow(QMainWindow):
-    """Okno deszyfrowania pliku"""
+class EncryptFileVigenereWindow(QMainWindow):
+    """Okno szyfrowania pliku szyfrem Vigenère"""
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
+        app_logger.log_window_open("EncryptFileVigenereWindow")
         self.init_ui()
         self.setup_styles()
         
@@ -34,9 +36,9 @@ class DecryptFileWindow(QMainWindow):
         return ext in binary_extensions
         
     def init_ui(self):
-        """Inicjalizacja interfejsu okna deszyfrowania pliku"""
-        self.setWindowTitle("Deszyfrowanie Pliku")
-        self.setGeometry(250, 250, 700, 600)
+        """Inicjalizacja interfejsu okna szyfrowania pliku"""
+        self.setWindowTitle("Szyfrowanie Pliku - Vigenère")
+        self.setGeometry(200, 200, 700, 600)
         self.setMinimumSize(600, 500)
         self.showMaximized()
         
@@ -48,16 +50,16 @@ class DecryptFileWindow(QMainWindow):
         layout.setContentsMargins(30, 30, 30, 30)
         
         # Tytuł
-        title = QLabel("🔓 Deszyfrowanie Pliku")
+        title = QLabel("🔑 Szyfrowanie Pliku - Vigenère")
         title.setAlignment(Qt.AlignCenter)
         title.setFont(QFont("Arial", 18, QFont.Bold))
         title.setStyleSheet("""
             QLabel {
-                color: #e74c3c;
+                color: #9b59b6;
                 padding: 10px;
                 background: white;
                 border-radius: 10px;
-                border: 2px solid #e74c3c;
+                border: 2px solid #9b59b6;
             }
         """)
         layout.addWidget(title)
@@ -83,14 +85,14 @@ class DecryptFileWindow(QMainWindow):
         file_layout = QVBoxLayout(file_group)
         file_layout.setSpacing(10)
         
-        file_label = QLabel("Zaszyfrowany plik:")
+        file_label = QLabel("Plik do szyfrowania:")
         file_label.setFont(QFont("Arial", 11, QFont.Bold))
         file_layout.addWidget(file_label)
         
         file_input_layout = QHBoxLayout()
         
         self.file_input = QLineEdit()
-        self.file_input.setPlaceholderText("Wybierz zaszyfrowany plik...")
+        self.file_input.setPlaceholderText("Wybierz plik do szyfrowania...")
         self.file_input.setReadOnly(True)
         self.file_input.setStyleSheet("""
             QLineEdit {
@@ -126,8 +128,8 @@ class DecryptFileWindow(QMainWindow):
         file_layout.addLayout(file_input_layout)
         layout.addWidget(file_group)
         
-        # Sekcja opcji szyfru Cezara
-        cipher_group = QGroupBox("🔤 Opcje szyfru Cezara")
+        # Sekcja opcji szyfru Vigenère
+        cipher_group = QGroupBox("🔑 Opcje szyfru Vigenère")
         cipher_group.setFont(QFont("Arial", 12, QFont.Bold))
         cipher_group.setStyleSheet("""
             QGroupBox {
@@ -147,30 +149,30 @@ class DecryptFileWindow(QMainWindow):
         cipher_layout = QVBoxLayout(cipher_group)
         cipher_layout.setSpacing(10)
         
-        shift_label = QLabel("Przesunięcie (1-25):")
-        shift_label.setFont(QFont("Arial", 11, QFont.Bold))
-        cipher_layout.addWidget(shift_label)
+        key_label = QLabel("Klucz szyfrowania:")
+        key_label.setFont(QFont("Arial", 11, QFont.Bold))
+        cipher_layout.addWidget(key_label)
         
-        shift_layout = QHBoxLayout()
-        self.shift_input = QLineEdit()
-        self.shift_input.setPlaceholderText("Wprowadź przesunięcie (1-25)")
-        self.shift_input.setText("3")
-        self.shift_input.setStyleSheet("""
+        key_layout = QHBoxLayout()
+        self.key_input = QLineEdit()
+        self.key_input.setPlaceholderText("Wprowadź klucz (tylko litery)...")
+        self.key_input.setText("SECRET")
+        self.key_input.setStyleSheet("""
             QLineEdit {
                 border: 2px solid #bdc3c7;
                 border-radius: 8px;
                 padding: 8px;
                 font-size: 11px;
                 background: white;
-                max-width: 150px;
+                max-width: 200px;
             }
             QLineEdit:focus {
                 border-color: #3498db;
             }
         """)
-        shift_layout.addWidget(self.shift_input)
-        shift_layout.addStretch()
-        cipher_layout.addLayout(shift_layout)
+        key_layout.addWidget(self.key_input)
+        key_layout.addStretch()
+        cipher_layout.addLayout(key_layout)
         
         layout.addWidget(cipher_group)
         
@@ -178,33 +180,14 @@ class DecryptFileWindow(QMainWindow):
         buttons_layout = QHBoxLayout()
         buttons_layout.setSpacing(15)
         
-        self.preview_btn = QPushButton("👁️ Podgląd")
-        self.preview_btn.setMinimumSize(120, 40)
-        self.preview_btn.setFont(QFont("Arial", 12, QFont.Bold))
-        self.preview_btn.setStyleSheet("""
-            QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #f39c12, stop:1 #e67e22);
-                color: white;
-                border: none;
-                border-radius: 8px;
-                padding: 10px;
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #e67e22, stop:1 #d35400);
-            }
-        """)
-        self.preview_btn.clicked.connect(self.preview_decryption)
-        buttons_layout.addWidget(self.preview_btn)
         
-        self.decrypt_btn = QPushButton("🔓 Deszyfruj plik")
-        self.decrypt_btn.setMinimumSize(150, 40)
-        self.decrypt_btn.setFont(QFont("Arial", 12, QFont.Bold))
-        self.decrypt_btn.setStyleSheet("""
+        self.encrypt_btn = QPushButton("🔑 Szyfruj plik")
+        self.encrypt_btn.setMinimumSize(150, 40)
+        self.encrypt_btn.setFont(QFont("Arial", 12, QFont.Bold))
+        self.encrypt_btn.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #e74c3c, stop:1 #c0392b);
+                    stop:0 #9b59b6, stop:1 #8e44ad);
                 color: white;
                 border: none;
                 border-radius: 8px;
@@ -212,11 +195,11 @@ class DecryptFileWindow(QMainWindow):
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
-                    stop:0 #c0392b, stop:1 #a93226);
+                    stop:0 #8e44ad, stop:1 #7d3c98);
             }
         """)
-        self.decrypt_btn.clicked.connect(self.decrypt_file)
-        buttons_layout.addWidget(self.decrypt_btn)
+        self.encrypt_btn.clicked.connect(self.encrypt_file)
+        buttons_layout.addWidget(self.encrypt_btn)
         
         self.clear_btn = QPushButton("🗑️ Wyczyść")
         self.clear_btn.setMinimumSize(120, 40)
@@ -261,7 +244,7 @@ class DecryptFileWindow(QMainWindow):
         result_layout = QVBoxLayout(result_group)
         result_layout.setSpacing(10)
         
-        result_label = QLabel("Informacje o deszyfrowaniu:")
+        result_label = QLabel("Informacje o szyfrowaniu:")
         result_label.setFont(QFont("Arial", 11, QFont.Bold))
         result_layout.addWidget(result_label)
         
@@ -271,7 +254,7 @@ class DecryptFileWindow(QMainWindow):
         self.result_output.setMaximumHeight(300)
         self.result_output.setStyleSheet("""
             QTextEdit {
-                border: 2px solid #e74c3c;
+                border: 2px solid #9b59b6;
                 border-radius: 8px;
                 padding: 15px;
                 font-size: 12px;
@@ -310,7 +293,7 @@ class DecryptFileWindow(QMainWindow):
         layout.addLayout(back_layout)
         
     def setup_styles(self):
-        """Ustawienie stylów okna deszyfrowania pliku"""
+        """Ustawienie stylów okna szyfrowania pliku"""
         self.setStyleSheet("""
             QMainWindow {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1, 
@@ -322,30 +305,35 @@ class DecryptFileWindow(QMainWindow):
         """Otwiera dialog wyboru pliku"""
         file_path, _ = QFileDialog.getOpenFileName(
             self, 
-            "Wybierz zaszyfrowany plik", 
+            "Wybierz plik do szyfrowania", 
             "", 
             "Wszystkie pliki (*.*);;Pliki tekstowe (*.txt *.md *.py *.js *.html *.css);;Pliki PDF (*.pdf);;Obrazy (*.jpg *.jpeg *.png *.gif *.bmp *.tiff);;Dokumenty (*.doc *.docx *.xls *.xlsx *.ppt *.pptx);;Archiwa (*.zip *.rar *.7z);;Filmy (*.mp4 *.avi *.mov *.mkv);;Muzyka (*.mp3 *.wav *.flac)"
         )
         if file_path:
             self.file_input.setText(file_path)
             
-    def preview_decryption(self):
-        """Pokazuje podgląd deszyfrowania pliku"""
+    def preview_encryption(self):
+        """Pokazuje podgląd szyfrowania pliku"""
         file_path = self.file_input.text().strip()
         if not file_path:
-            QMessageBox.warning(self, "Błąd", "Wybierz plik do deszyfrowania!")
+            app_logger.log_validation_error("plik", "nie wybrano pliku")
+            QMessageBox.warning(self, "Błąd", "Wybierz plik do szyfrowania!")
             return
             
         if not os.path.exists(file_path):
+            app_logger.log_validation_error("plik", f"plik nie istnieje: {file_path}")
             QMessageBox.warning(self, "Błąd", "Wybrany plik nie istnieje!")
             return
             
+        key = self.key_input.text().strip()
+        if not key:
+            app_logger.log_validation_error("klucz", "pusty klucz")
+            QMessageBox.warning(self, "Błąd", "Wprowadź klucz szyfrowania!")
+            return
+            
         try:
-            shift = int(self.shift_input.text().strip())
-            if shift < 1 or shift > 25:
-                QMessageBox.warning(self, "Błąd", "Przesunięcie musi być liczbą od 1 do 25!")
-                return
-                
+            app_logger.log_preview("szyfrowania Vigenère", file_path, key)
+            
             # Wczytaj początek pliku do podglądu
             with open(file_path, 'r', encoding='utf-8') as file:
                 content = file.read()
@@ -355,88 +343,99 @@ class DecryptFileWindow(QMainWindow):
             if len(content) > 500:
                 preview_content += "\n... (plik jest dłuższy)"
             
-            # Odszyfruj podgląd
-            from utils.caesar_cipher import caesar_decrypt
-            decrypted_preview = caesar_decrypt(preview_content, shift)
+            # Zaszyfruj podgląd
+            encrypted_preview = vigenere_encrypt(preview_content, key)
             
             # Wyświetl podgląd
             self.result_output.setPlainText(
-                f"👁️ PODGLĄD DESZYFROWANIA PLIKU\n\n"
+                f"👁️ PODGLĄD SZYFROWANIA PLIKU VIGENÈRE\n\n"
                 f"📁 Plik: {os.path.basename(file_path)}\n"
-                f"🔢 Przesunięcie: {shift}\n"
+                f"🔑 Klucz: {key}\n"
                 f"📏 Rozmiar pliku: {len(content)} znaków\n\n"
-                f"🔒 Zaszyfrowany tekst (pierwsze 500 znaków):\n"
+                f"📝 Oryginalny tekst (pierwsze 500 znaków):\n"
                 f"{preview_content}\n\n"
-                f"📝 Odszyfrowany tekst:\n"
-                f"{decrypted_preview}\n\n"
-                f"💡 Kliknij 'Deszyfruj plik' aby zapisać pełny odszyfrowany plik"
+                f"🔒 Zaszyfrowany tekst:\n"
+                f"{encrypted_preview}\n\n"
+                f"💡 Kliknij 'Szyfruj plik' aby zapisać pełny zaszyfrowany plik"
             )
             
-        except ValueError:
-            QMessageBox.warning(self, "Błąd", "Przesunięcie musi być liczbą całkowitą!")
+        except ValueError as e:
+            app_logger.log_validation_error("klucz", str(e))
+            QMessageBox.warning(self, "Błąd", f"Błąd klucza: {str(e)}")
         except Exception as e:
+            app_logger.log_error("podgląd szyfrowania Vigenère", str(e))
             QMessageBox.critical(self, "Błąd", f"Wystąpił błąd podczas podglądu: {str(e)}")
             
-    def decrypt_file(self):
-        """Deszyfruje plik szyfrem Cezara"""
+    def encrypt_file(self):
+        """Szyfruje plik szyfrem Vigenère"""
         file_path = self.file_input.text().strip()
         if not file_path:
-            QMessageBox.warning(self, "Błąd", "Wybierz plik do deszyfrowania!")
+            app_logger.log_validation_error("plik", "nie wybrano pliku")
+            QMessageBox.warning(self, "Błąd", "Wybierz plik do szyfrowania!")
             return
             
         if not os.path.exists(file_path):
+            app_logger.log_validation_error("plik", f"plik nie istnieje: {file_path}")
             QMessageBox.warning(self, "Błąd", "Wybrany plik nie istnieje!")
             return
             
+        key = self.key_input.text().strip()
+        if not key:
+            app_logger.log_validation_error("klucz", "pusty klucz")
+            QMessageBox.warning(self, "Błąd", "Wprowadź klucz szyfrowania!")
+            return
+            
         try:
-            shift = int(self.shift_input.text().strip())
-            if shift < 1 or shift > 25:
-                QMessageBox.warning(self, "Błąd", "Przesunięcie musi być liczbą od 1 do 25!")
-                return
-                
             # Wybierz lokalizację zapisu
             output_path, _ = QFileDialog.getSaveFileName(
                 self, 
-                "Zapisz odszyfrowany plik jako", 
-                file_path.replace('.encrypted', ''), 
+                "Zapisz zaszyfrowany plik jako", 
+                file_path + ".vigenere_encrypted", 
                 "Wszystkie pliki (*.*)"
             )
             
             if not output_path:
+                app_logger.log_user_action("anulowano wybór lokalizacji zapisu")
                 return
                 
-            # Automatycznie wybierz odpowiednią funkcję deszyfrowania
+            app_logger.log_file_operation("Szyfrowanie Vigenère", file_path, key)
+            
+            # Automatycznie wybierz odpowiednią funkcję szyfrowania
             if self.is_binary_file(file_path):
-                success = caesar_decrypt_binary_file(file_path, output_path, shift)
+                success = vigenere_encrypt_binary_file(file_path, output_path, key)
                 file_type = "binarny"
             else:
-                success = caesar_decrypt_file(file_path, output_path, shift)
+                success = vigenere_encrypt_file(file_path, output_path, key)
                 file_type = "tekstowy"
             
             if success:
+                app_logger.log_file_success("Szyfrowanie Vigenère", file_path, output_path)
                 self.result_output.setPlainText(
-                    f"🔓 DESZYFROWANIE PLIKU ZAKOŃCZONE SUKCESEM!\n\n"
-                    f"📁 Zaszyfrowany plik: {os.path.basename(file_path)}\n"
-                    f"🔐 Odszyfrowany plik: {os.path.basename(output_path)}\n"
+                    f"🔑 SZYFROWANIE PLIKU VIGENÈRE ZAKOŃCZONE SUKCESEM!\n\n"
+                    f"📁 Oryginalny plik: {os.path.basename(file_path)}\n"
+                    f"🔐 Zaszyfrowany plik: {os.path.basename(output_path)}\n"
                     f"📄 Typ pliku: {file_type}\n"
-                    f"🔢 Przesunięcie: {shift}\n"
+                    f"🔑 Klucz: {key}\n"
                     f"📍 Lokalizacja: {output_path}"
                 )
                 QMessageBox.information(self, "Sukces", 
-                    f"Plik został odszyfrowany szyfrem Cezara z przesunięciem {shift}!\n"
+                    f"Plik został zaszyfrowany szyfrem Vigenère z kluczem '{key}'!\n"
                     f"Zapisano jako: {os.path.basename(output_path)}")
             else:
-                QMessageBox.critical(self, "Błąd", "Wystąpił błąd podczas deszyfrowania pliku!")
+                app_logger.log_error("szyfrowanie pliku Vigenère", "nie udało się zaszyfrować pliku")
+                QMessageBox.critical(self, "Błąd", "Wystąpił błąd podczas szyfrowania pliku!")
                 
-        except ValueError:
-            QMessageBox.warning(self, "Błąd", "Przesunięcie musi być liczbą całkowitą!")
+        except ValueError as e:
+            app_logger.log_validation_error("klucz", str(e))
+            QMessageBox.warning(self, "Błąd", f"Błąd klucza: {str(e)}")
         except Exception as e:
-            QMessageBox.critical(self, "Błąd", f"Wystąpił błąd podczas deszyfrowania: {str(e)}")
+            app_logger.log_error("szyfrowanie pliku Vigenère", str(e))
+            QMessageBox.critical(self, "Błąd", f"Wystąpił błąd podczas szyfrowania: {str(e)}")
             
     def clear_fields(self):
         """Czyści wszystkie pola"""
         self.file_input.clear()
-        self.shift_input.setText("3")
+        self.key_input.setText("SECRET")
         self.result_output.clear()
         
     def go_back(self):
@@ -444,4 +443,3 @@ class DecryptFileWindow(QMainWindow):
         if self.parent:
             self.parent.show()
         self.close()
-

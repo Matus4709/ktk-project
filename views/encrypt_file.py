@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QGroupBox, QGridLayout)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from utils.caesar_cipher import caesar_encrypt_file
+from utils.caesar_cipher import caesar_encrypt_file, caesar_encrypt_binary_file
 from utils.logger import app_logger
 
 
@@ -24,6 +24,16 @@ class EncryptFileWindow(QMainWindow):
         app_logger.log_window_open("EncryptFileWindow")
         self.init_ui()
         self.setup_styles()
+        
+    def is_binary_file(self, file_path):
+        """Sprawdza czy plik jest binarny (PDF, obrazy, itp.)"""
+        binary_extensions = {'.pdf', '.jpg', '.jpeg', '.png', '.gif', '.bmp', 
+                           '.tiff', '.ico', '.mp3', '.mp4', '.avi', '.mov', 
+                           '.zip', '.rar', '.7z', '.exe', '.dll', '.so', 
+                           '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'}
+        
+        _, ext = os.path.splitext(file_path.lower())
+        return ext in binary_extensions
         
     def init_ui(self):
         """Inicjalizacja interfejsu okna szyfrowania pliku"""
@@ -316,7 +326,7 @@ class EncryptFileWindow(QMainWindow):
             self, 
             "Wybierz plik do szyfrowania", 
             "", 
-            "Wszystkie pliki (*.*)"
+            "Wszystkie pliki (*.*);;Pliki tekstowe (*.txt *.md *.py *.js *.html *.css);;Pliki PDF (*.pdf);;Obrazy (*.jpg *.jpeg *.png *.gif *.bmp *.tiff);;Dokumenty (*.doc *.docx *.xls *.xlsx *.ppt *.pptx);;Archiwa (*.zip *.rar *.7z);;Filmy (*.mp4 *.avi *.mov *.mkv);;Muzyka (*.mp3 *.wav *.flac)"
         )
         if file_path:
             self.file_input.setText(file_path)
@@ -409,7 +419,14 @@ class EncryptFileWindow(QMainWindow):
                 return
                 
             app_logger.log_file_operation("Szyfrowanie", file_path, shift)
-            success = caesar_encrypt_file(file_path, output_path, shift)
+            
+            # Automatycznie wybierz odpowiednią funkcję szyfrowania
+            if self.is_binary_file(file_path):
+                success = caesar_encrypt_binary_file(file_path, output_path, shift)
+                file_type = "binarny"
+            else:
+                success = caesar_encrypt_file(file_path, output_path, shift)
+                file_type = "tekstowy"
             
             if success:
                 app_logger.log_file_success("Szyfrowanie", file_path, output_path)
@@ -417,6 +434,7 @@ class EncryptFileWindow(QMainWindow):
                     f"🔒 SZYFROWANIE PLIKU ZAKOŃCZONE SUKCESEM!\n\n"
                     f"📁 Oryginalny plik: {os.path.basename(file_path)}\n"
                     f"🔐 Zaszyfrowany plik: {os.path.basename(output_path)}\n"
+                    f"📄 Typ pliku: {file_type}\n"
                     f"🔢 Przesunięcie: {shift}\n"
                     f"📍 Lokalizacja: {output_path}"
                 )
