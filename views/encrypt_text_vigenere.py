@@ -265,3 +265,7 @@ class EncryptTextVigenereWindow(QMainWindow):
         if self.parent:
             self.parent.show()
         self.close()
+
+
+
+

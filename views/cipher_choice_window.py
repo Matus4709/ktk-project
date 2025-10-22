@@ -150,6 +150,32 @@ class CipherChoiceWindow(QMainWindow):
         self.stream_btn.clicked.connect(self.open_stream_window)
         options_layout.addWidget(self.stream_btn, 0, 2)
         
+        # Szyfr AES
+        self.aes_btn = QPushButton("🔐 AES")
+        self.aes_btn.setMinimumSize(200, 150)
+        self.aes_btn.setFont(QFont("Arial", 16, QFont.Bold))
+        self.aes_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #e74c3c, stop:1 #c0392b);
+                color: white;
+                border: none;
+                border-radius: 15px;
+                padding: 20px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #c0392b, stop:1 #a93226);
+                transform: scale(1.05);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #a93226, stop:1 #922b21);
+            }
+        """)
+        self.aes_btn.clicked.connect(self.open_aes_window)
+        options_layout.addWidget(self.aes_btn, 1, 0)
+        
         # # Opcja AES (wkrótce)
         # aes_option_layout = QHBoxLayout()
         
@@ -305,6 +331,26 @@ class CipherChoiceWindow(QMainWindow):
             else:
                 from .decrypt_file_stream import DecryptFileStreamWindow
                 self.cipher_window = DecryptFileStreamWindow(self)
+        
+        self.cipher_window.show()
+        self.hide()
+        
+    def open_aes_window(self):
+        """Otwiera okno szyfrowania/deszyfrowania szyfrem AES"""
+        if self.data_type == "text":
+            if self.operation_type == "encrypt":
+                from .encrypt_text_aes import AESEncryptTextWindow
+                self.cipher_window = AESEncryptTextWindow()
+            else:
+                from .decrypt_text_aes import AESDecryptTextWindow
+                self.cipher_window = AESDecryptTextWindow()
+        else:  # file
+            if self.operation_type == "encrypt":
+                from .encrypt_file_aes import AESEncryptFileWindow
+                self.cipher_window = AESEncryptFileWindow()
+            else:
+                from .decrypt_file_aes import AESDecryptFileWindow
+                self.cipher_window = AESDecryptFileWindow()
         
         self.cipher_window.show()
         self.hide()

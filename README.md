@@ -4,10 +4,11 @@ Aplikacja desktopowa napisana w Python z wykorzystaniem PyQt5 do szyfrowania i d
 
 ## 🚀 Funkcjonalności
 
-- **Trzy metody szyfrowania**:
+- **Cztery metody szyfrowania**:
   - 🔤 **Szyfr Cezara** - Klasyczny szyfr przesuwający
   - 🔑 **Szyfr Vigenère** - Szyfr polialfabetyczny z kluczem
   - 🌊 **Szyfr z kluczem bieżącym** - Stream cipher z deterministycznym strumieniem
+  - 🔐 **AES** - Advanced Encryption Standard (128/192/256-bit)
 - **Szyfrowanie tekstu i plików** - Obsługa zarówno tekstu jak i plików binarnych
 - **Nowoczesny interfejs GUI** - Intuicyjny interfejs z PyQt5
 - **Bezpieczne szyfrowanie** - Własne implementacje algorytmów kryptograficznych
@@ -46,6 +47,7 @@ python main.py
 - **🔤 Szyfr Cezara** - przesunięcie alfabetyczne (1-25)
 - **🔑 Szyfr Vigenère** - szyfr polialfabetyczny z kluczem
 - **🌊 Szyfr z kluczem bieżącym** - stream cipher z deterministycznym strumieniem
+- **🔐 AES** - Advanced Encryption Standard (128/192/256-bit)
 
 ### 4. Operacje na tekście
 1. Wprowadź tekst do szyfrowania/deszyfrowania
@@ -72,6 +74,7 @@ ktk-project/
 │   ├── caesar_cipher.py            # Szyfr Cezara
 │   ├── vigenere_cipher.py          # Szyfr Vigenère
 │   ├── stream_cipher.py            # Szyfr z kluczem bieżącym
+│   ├── aes_cipher.py               # Advanced Encryption Standard
 │   ├── crypto_utils.py             # Funkcje pomocnicze
 │   └── logger.py                   # System logowania
 └── views/                           # Okna aplikacji
@@ -81,22 +84,26 @@ ktk-project/
     ├── encrypt_text.py             # Szyfrowanie tekstu (Cezar)
     ├── encrypt_text_vigenere.py    # Szyfrowanie tekstu (Vigenère)
     ├── encrypt_text_stream.py      # Szyfrowanie tekstu (Stream)
-    ├── encrypt_file.py             # Szyfrowanie pliku (Cezar)
+    ├── encrypt_text_aes.py          # Szyfrowanie tekstu (AES)
+    ├── encrypt_file.py              # Szyfrowanie pliku (Cezar)
     ├── encrypt_file_vigenere.py    # Szyfrowanie pliku (Vigenère)
     ├── encrypt_file_stream.py      # Szyfrowanie pliku (Stream)
+    ├── encrypt_file_aes.py         # Szyfrowanie pliku (AES)
     ├── decrypt_text.py             # Deszyfrowanie tekstu (Cezar)
     ├── decrypt_text_vigenere.py    # Deszyfrowanie tekstu (Vigenère)
     ├── decrypt_text_stream.py      # Deszyfrowanie tekstu (Stream)
+    ├── decrypt_text_aes.py         # Deszyfrowanie tekstu (AES)
     ├── decrypt_file.py             # Deszyfrowanie pliku (Cezar)
     ├── decrypt_file_vigenere.py   # Deszyfrowanie pliku (Vigenère)
-    └── decrypt_file_stream.py      # Deszyfrowanie pliku (Stream)
+    ├── decrypt_file_stream.py      # Deszyfrowanie pliku (Stream)
+    └── decrypt_file_aes.py         # Deszyfrowanie pliku (AES)
 ```
 
 ## 🎨 Funkcje GUI
 
 - **Główne okno** - Wybór między szyfrowaniem a deszyfrowaniem
 - **Okno wyboru typu** - Wybór między tekstem a plikiem
-- **Okno wyboru szyfru** - Wybór metody szyfrowania (Cezar/Vigenère/Stream)
+- **Okno wyboru szyfru** - Wybór metody szyfrowania (Cezar/Vigenère/Stream/AES)
 - **Okna szyfrowania** - Dedykowane interfejsy dla każdej metody
 - **Okna deszyfrowania** - Dedykowane interfejsy dla każdej metody
 - **Responsywny design** - Dostosowuje się do różnych rozmiarów okien
@@ -125,23 +132,15 @@ ktk-project/
 - **Zastosowanie**: Tekst, pliki tekstowe i binarne
 - **Algorytm**: SHA-256 + XOR
 
-## 🚀 Możliwości rozbudowy
+### 🔐 Advanced Encryption Standard (AES)
+- **Typ**: Szyfr blokowy symetryczny
+- **Klucz**: 128, 192 lub 256 bitów
+- **Bezpieczeństwo**: Bardzo wysoki, standard przemysłowy
+- **Zastosowanie**: Tekst, pliki tekstowe i binarne
+- **Algorytm**: AES-128/192/256 z własną implementacją
+- **Funkcje**: SubBytes, ShiftRows, MixColumns, AddRoundKey
 
-Aplikacja została zaprojektowana z myślą o dalszej rozbudowie:
-- ✅ **Trzy metody szyfrowania** (zaimplementowane)
-- ✅ **Szyfrowanie plików binarnych** (Stream Cipher)
-- 🔄 **Dodatkowe algorytmy** - AES, RSA, Blowfish
-- 🔄 **Szyfrowanie obrazów** - steganografia
-- 🔄 **Klucze publiczne** - infrastruktura PKI
-- 🔄 **Sieciowe szyfrowanie** - komunikacja przez sieć
-- 🔄 **Baza danych** - przechowywanie kluczy i metadanych
-- 🔄 **Historia operacji** - logowanie wszystkich działań
-- 🔄 **Eksport/import kluczy** - zarządzanie kluczami
 
 ## 👨‍💻 Autor
 
-Python Developer - Aplikacja stworzona w ramach projektu edukacyjnego
-
-## 📄 Licencja
-
-Projekt edukacyjny - do użytku osobistego i naukowego
+Marek Pichniarczyk | mmp-portfolio.pl

@@ -265,3 +265,7 @@ class DecryptTextVigenereWindow(QMainWindow):
         if self.parent:
             self.parent.show()
         self.close()
+
+
+
+
