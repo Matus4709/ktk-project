@@ -8,7 +8,7 @@ import traceback
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                              QWidget, QLabel, QLineEdit, QPushButton, QFileDialog,
                              QComboBox, QMessageBox, QFrame, QProgressBar)
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve
 from PyQt5.QtGui import QFont, QIcon, QPalette, QColor, QLinearGradient, QBrush
 from utils.aes_cipher import aes_encrypt_file
 from utils.logger import AppLogger
@@ -50,6 +50,7 @@ class AESEncryptFileWindow(QMainWindow):
         self.setWindowTitle("🔐 Szyfrowanie pliku - AES")
         self.setGeometry(100, 100, 700, 500)
         self.setMinimumSize(600, 400)
+        self.showMaximized()
         
         # Główny widget
         central_widget = QWidget()
@@ -528,7 +529,23 @@ class AESEncryptFileWindow(QMainWindow):
             app_logger.error(f"Clear all error: {str(e)}")
     
     def go_back(self):
-        """Powraca do poprzedniego okna"""
+        """Powraca do poprzedniego okna z płynnym przejściem"""
+        try:
+            # Animacja fade out
+            self.fade_out_animation = QPropertyAnimation(self, b"windowOpacity")
+            self.fade_out_animation.setDuration(300)
+            self.fade_out_animation.setStartValue(1.0)
+            self.fade_out_animation.setEndValue(0.0)
+            self.fade_out_animation.setEasingCurve(QEasingCurve.OutCubic)
+            self.fade_out_animation.finished.connect(self._open_cipher_window)
+            self.fade_out_animation.start()
+            
+        except Exception as e:
+            app_logger.error(f"Go back error: {str(e)}")
+            QMessageBox.critical(self, "Błąd", f"Wystąpił błąd:\n{str(e)}")
+    
+    def _open_cipher_window(self):
+        """Otwiera okno wyboru szyfru po animacji"""
         try:
             from views.cipher_choice_window import CipherChoiceWindow
             self.cipher_window = CipherChoiceWindow()
@@ -536,7 +553,7 @@ class AESEncryptFileWindow(QMainWindow):
             self.close()
             app_logger.info("Returned to cipher choice window")
         except Exception as e:
-            app_logger.error(f"Go back error: {str(e)}")
+            app_logger.error(f"Open cipher window error: {str(e)}")
             QMessageBox.critical(self, "Błąd", f"Wystąpił błąd:\n{str(e)}")
 
 def main():
