@@ -133,3 +133,4 @@ a projekt używa [Semantic Versioning](https://semver.org/lang/pl/).
 - **Usunięte** - funkcjonalności usunięte w tej wersji
 - **Naprawione** - poprawki błędów
 - **Bezpieczeństwo** - poprawki bezpieczeństwa
+
