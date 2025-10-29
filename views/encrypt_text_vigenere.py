@@ -271,3 +271,5 @@ class EncryptTextVigenereWindow(QMainWindow):
 
 
 
+
+
