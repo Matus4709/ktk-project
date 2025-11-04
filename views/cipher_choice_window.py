@@ -176,6 +176,32 @@ class CipherChoiceWindow(QMainWindow):
         self.aes_btn.clicked.connect(self.open_aes_window)
         options_layout.addWidget(self.aes_btn, 1, 0)
         
+        # Szyfr RSA
+        self.rsa_btn = QPushButton("🔑 RSA")
+        self.rsa_btn.setMinimumSize(200, 150)
+        self.rsa_btn.setFont(QFont("Arial", 16, QFont.Bold))
+        self.rsa_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #f39c12, stop:1 #e67e22);
+                color: white;
+                border: none;
+                border-radius: 15px;
+                padding: 20px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #e67e22, stop:1 #d35400);
+                transform: scale(1.05);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #d35400, stop:1 #ba4a00);
+            }
+        """)
+        self.rsa_btn.clicked.connect(self.open_rsa_window)
+        options_layout.addWidget(self.rsa_btn, 1, 1)
+        
         # # Opcja AES (wkrótce)
         # aes_option_layout = QHBoxLayout()
         
@@ -351,6 +377,26 @@ class CipherChoiceWindow(QMainWindow):
             else:
                 from .decrypt_file_aes import AESDecryptFileWindow
                 self.cipher_window = AESDecryptFileWindow()
+        
+        self.cipher_window.show()
+        self.hide()
+    
+    def open_rsa_window(self):
+        """Otwiera okno szyfrowania/deszyfrowania szyfrem RSA"""
+        if self.data_type == "text":
+            if self.operation_type == "encrypt":
+                from .encrypt_text_rsa import RSAEncryptTextWindow
+                self.cipher_window = RSAEncryptTextWindow(self)
+            else:
+                from .decrypt_text_rsa import RSADecryptTextWindow
+                self.cipher_window = RSADecryptTextWindow(self)
+        else:  # file
+            if self.operation_type == "encrypt":
+                from .encrypt_file_rsa import RSAEncryptFileWindow
+                self.cipher_window = RSAEncryptFileWindow(self)
+            else:
+                from .decrypt_file_rsa import RSADecryptFileWindow
+                self.cipher_window = RSADecryptFileWindow(self)
         
         self.cipher_window.show()
         self.hide()
