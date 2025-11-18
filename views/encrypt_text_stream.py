@@ -267,9 +267,16 @@ class EncryptTextStreamWindow(QMainWindow):
             QMessageBox.information(self, "Sukces", 
                 "Tekst został zaszyfrowany szyfrem z kluczem bieżącym!")
             
+            # Pokaż okno logów
+            from views.log_window_helper import show_log_window
+            show_log_window(self)
+            
         except Exception as e:
             app_logger.log_error("szyfrowanie tekstu", str(e))
             QMessageBox.critical(self, "Błąd", f"Wystąpił błąd podczas szyfrowania: {str(e)}")
+            # Pokaż okno logów
+            from views.log_window_helper import show_log_window
+            show_log_window(self)
             
     def clear_fields(self):
         """Czyści wszystkie pola"""

@@ -633,15 +633,27 @@ class RSAEncryptTextWindow(QMainWindow):
             app_logger.info("RSA text encryption completed successfully")
             QMessageBox.information(self, "Sukces", "Tekst został zaszyfrowany pomyślnie!")
             
+            # Pokaż okno logów
+            from views.log_window_helper import show_log_window
+            show_log_window(self)
+            
         except Exception as e:
             app_logger.error(f"RSA encryption finish error: {str(e)}")
             QMessageBox.critical(self, "Błąd", f"Wystąpił błąd:\n{str(e)}")
             self.encrypt_button.setEnabled(True)
             self.encrypt_button.setText("🔐 Szyfruj")
+            
+            # Pokaż okno logów
+            from views.log_window_helper import show_log_window
+            show_log_window(self)
     
     def on_encryption_error(self, error_msg):
         """Obsługuje błąd szyfrowania"""
         app_logger.error(f"RSA encryption error: {error_msg}")
+        
+        # Pokaż okno logów
+        from views.log_window_helper import show_log_window
+        show_log_window(self)
         QMessageBox.critical(self, "Błąd szyfrowania", f"Wystąpił błąd podczas szyfrowania:\n{error_msg}")
         self.encrypt_button.setEnabled(True)
         self.encrypt_button.setText("🔐 Szyfruj")

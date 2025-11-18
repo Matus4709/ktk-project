@@ -8,9 +8,7 @@ import hashlib
 import json
 import os
 from typing import Tuple, Optional
-from utils.logger import AppLogger
-
-app_logger = AppLogger()
+from utils.logger import app_logger
 
 
 class RSA:
@@ -217,20 +215,51 @@ class RSA:
             Zaszyfrowany tekst (hex)
         """
         try:
-            app_logger.info(f"RSA encryption started for text of length {len(plaintext)}")
+            app_logger.start_operation(f"RSA-{self.key_size} Szyfrowanie Tekstu", "RSA", "encrypt")
+            
+            preview_text = plaintext[:30] + "..." if len(plaintext) > 30 else plaintext
+            app_logger.add_step("INFO", f"Długość tekstu wejściowego: {len(plaintext)} znaków",
+                          {"przykład_tekstu": preview_text},
+                          explanation="RSA (Rivest-Shamir-Adleman) to asymetryczny szyfr kryptograficzny.\n"
+                                    "Używa pary kluczy: publicznego do szyfrowania i prywatnego do deszyfrowania.\n"
+                                    "Szyfrowanie: c = m^e mod n, gdzie m to wiadomość, e to wykładnik publiczny, n to moduł.")
             
             n, e = public_key
+            app_logger.add_step("INFO", f"Klucz publiczny: (n, e)",
+                          {"n": f"{n}",
+                           "e": f"{e}",
+                           "rozmiar_klucza": f"{self.key_size} bitów"},
+                          explanation=f"Klucz publiczny składa się z:\n"
+                                    f"- n (moduł): {n} - iloczyn dwóch dużych liczb pierwszych p i q\n"
+                                    f"- e (wykładnik publiczny): {e} - zwykle 65537\n"
+                                    f"Rozmiar klucza: {self.key_size} bitów oznacza, że n ma około {n.bit_length()} bitów.")
+            
             # Oblicz maksymalny rozmiar bloku (w bajtach)
-            # RSA może szyfrować wartości mniejsze niż n
-            # Używamy (bit_length - 1) // 8 aby upewnić się że wartość < n
             block_size = (n.bit_length() - 1) // 8
             if block_size < 1:
                 block_size = 1
             
+            app_logger.add_step("STEP", f"Obliczanie rozmiaru bloku: {block_size} bajtów",
+                          explanation=f"RSA może szyfrować liczby mniejsze niż n.\n"
+                                    f"Rozmiar bloku = (bit_length(n) - 1) // 8 = ({n.bit_length()} - 1) // 8 = {block_size} bajtów\n"
+                                    f"Tekst będzie dzielony na bloki po {block_size} bajtów każdy.")
+            
             # Konwertuj tekst na bajty
+            app_logger.add_step("STEP", "Konwersja tekstu na bajty UTF-8...",
+                          explanation="Tekst jest konwertowany na sekwencję bajtów używając kodowania UTF-8.")
             plaintext_bytes = plaintext.encode('utf-8')
+            preview_bytes = ' '.join(f'{b:02x}' for b in plaintext_bytes[:16]) + ("..." if len(plaintext_bytes) > 16 else "")
+            app_logger.add_step("STEP", f"Otrzymano {len(plaintext_bytes)} bajtów",
+                          {"przykładowe_bajty": preview_bytes},
+                          explanation=f"Tekst '{preview_text}' został przekształcony w {len(plaintext_bytes)} bajtów.\n"
+                                    f"Przykładowe bajty (hex): {preview_bytes}")
             
             encrypted_blocks = []
+            num_blocks = (len(plaintext_bytes) + block_size - 1) // block_size
+            
+            app_logger.add_step("STEP", f"Podział na {num_blocks} bloków po {block_size} bajtów...",
+                          explanation=f"Tekst zostanie podzielony na {num_blocks} bloków.\n"
+                                    f"Każdy blok (maksymalnie {block_size} bajtów) będzie konwertowany na liczbę całkowitą i szyfrowany.")
             
             # Podziel na bloki i szyfruj
             for i in range(0, len(plaintext_bytes), block_size):
@@ -239,15 +268,38 @@ class RSA:
                 if not block:
                     break
                 
+                block_num = i // block_size + 1
+                block_hex = block.hex()
+                
                 # Konwertuj blok na liczbę całkowitą
                 message_int = int.from_bytes(block, 'big')
+                
+                app_logger.add_step("STEP", f"Blok {block_num}/{num_blocks}: konwersja na liczbę całkowitą...",
+                                  {"blok_hex": block_hex,
+                                   "blok_int": str(message_int)},
+                                  explanation=f"Blok {block_num}: {block_hex}\n"
+                                            f"Konwersja na liczbę całkowitą: {message_int}\n"
+                                            f"Ta liczba musi być mniejsza niż n = {n}")
                 
                 # Sprawdź czy wiadomość nie przekracza n
                 if message_int >= n:
                     raise ValueError(f"Blok wiadomości ({message_int}) jest za duży dla klucza RSA (n={n})")
                 
                 # Szyfruj blok
+                app_logger.add_step("STEP", f"Blok {block_num}: szyfrowanie c = m^e mod n...",
+                                  explanation=f"Szyfrowanie: c = {message_int}^{e} mod {n}\n"
+                                            f"To jest potęgowanie modularne - obliczamy {message_int} do potęgi {e} modulo {n}.\n"
+                                            f"Wynik będzie liczbą całkowitą mniejszą niż {n}.")
                 encrypted_block = self.encrypt_block(message_int, public_key)
+                encrypted_hex_block = hex(encrypted_block)[2:]
+                
+                app_logger.add_step("STEP", f"Blok {block_num} zaszyfrowany",
+                                  {"zaszyfrowany_int": str(encrypted_block),
+                                   "zaszyfrowany_hex": encrypted_hex_block},
+                                  explanation=f"Blok {block_num} po szyfrowaniu:\n"
+                                            f"Liczba całkowita: {encrypted_block}\n"
+                                            f"Hex: {encrypted_hex_block}\n"
+                                            f"Ta wartość może być odszyfrowana tylko kluczem prywatnym (n, d).")
                 
                 # Konwertuj na hex (z zerem wiodącym jeśli potrzeba, aby zachować parzystość)
                 hex_str = hex(encrypted_block)[2:]
@@ -256,14 +308,37 @@ class RSA:
                     hex_str = '0' + hex_str
                 encrypted_blocks.append(hex_str)
             
-            # Połącz wszystkie bloki
-            encrypted_hex = '|'.join(encrypted_blocks)
+            app_logger.add_step("STEP", f"Zaszyfrowano {len(encrypted_blocks)} bloków",
+                          explanation=f"Wszystkie {len(encrypted_blocks)} bloków zostały zaszyfrowane.\n"
+                                    f"Każdy blok został przekształcony przez operację potęgowania modularnego.")
             
-            app_logger.info("RSA encryption completed successfully")
+            # Połącz wszystkie bloki
+            app_logger.add_step("STEP", "Łączenie zaszyfrowanych bloków...",
+                          explanation="Zaszyfrowane bloki są łączone znakiem '|' jako separator.\n"
+                                    "Każdy blok jest reprezentowany jako ciąg hex.")
+            encrypted_hex = '|'.join(encrypted_blocks)
+            preview_result = encrypted_hex[:50] + "..." if len(encrypted_hex) > 50 else encrypted_hex
+            
+            app_logger.add_step("INFO", f"Długość zaszyfrowanego tekstu: {len(encrypted_hex)} znaków",
+                          {"przykład_wyniku": preview_result},
+                          explanation=f"Tekst '{preview_text}' został zaszyfrowany.\n"
+                                    f"Zaszyfrowany tekst (hex z separatorami '|'): {preview_result}\n"
+                                    f"Każdy blok jest oddzielony znakiem '|' dla łatwego deszyfrowania.")
+            
+            result_summary = f"Zaszyfrowano {len(plaintext)} znaków tekstu do {len(encrypted_hex)} znaków hex"
+            app_logger.add_step("SUCCESS", "Szyfrowanie zakończone",
+                          explanation=f"RSA-{self.key_size} szyfrowanie zakończone pomyślnie.\n"
+                                    f"Tekst został podzielony na {num_blocks} bloków, każdy zaszyfrowany przez potęgowanie modularne.\n"
+                                    f"Oryginalny tekst: '{preview_text}'\n"
+                                    f"Zaszyfrowany tekst: {preview_result}\n"
+                                    f"Deszyfrowanie wymaga klucza prywatnego (n, d).")
+            app_logger.finish_operation(True, result_summary)
+            
             return encrypted_hex
             
         except Exception as e:
-            app_logger.error(f"RSA encryption failed: {str(e)}")
+            app_logger.add_step("ERROR", f"Błąd podczas szyfrowania: {str(e)}")
+            app_logger.finish_operation(False, f"Błąd: {str(e)}")
             raise
     
     def decrypt(self, ciphertext: str, private_key: Tuple[int, int]) -> str:
@@ -278,26 +353,75 @@ class RSA:
             Odszyfrowany tekst
         """
         try:
-            app_logger.info(f"RSA decryption started for ciphertext of length {len(ciphertext)}")
+            app_logger.start_operation(f"RSA-{self.key_size} Deszyfrowanie Tekstu", "RSA", "decrypt")
+            
+            preview_cipher = ciphertext[:50] + "..." if len(ciphertext) > 50 else ciphertext
+            app_logger.add_step("INFO", f"Długość zaszyfrowanego tekstu: {len(ciphertext)} znaków",
+                          {"przykład_tekstu": preview_cipher},
+                          explanation="Deszyfrowanie RSA używa klucza prywatnego (n, d) do odszyfrowania wiadomości.\n"
+                                    "Deszyfrowanie: m = c^d mod n, gdzie c to zaszyfrowana wiadomość, d to wykładnik prywatny, n to moduł.")
+            
+            n, d = private_key
+            app_logger.add_step("INFO", f"Klucz prywatny: (n, d)",
+                          {"n": f"{n}",
+                           "d": f"{d}",
+                           "rozmiar_klucza": f"{self.key_size} bitów"},
+                          explanation=f"Klucz prywatny składa się z:\n"
+                                    f"- n (moduł): {n} - ten sam co w kluczu publicznym\n"
+                                    f"- d (wykładnik prywatny): {d} - tajny wykładnik używany tylko do deszyfrowania")
             
             # Podziel na bloki
+            app_logger.add_step("STEP", "Podział zaszyfrowanego tekstu na bloki...",
+                          explanation="Zaszyfrowany tekst jest podzielony na bloki używając separatora '|'.\n"
+                                    "Każdy blok jest reprezentacją hex zaszyfrowanej liczby całkowitej.")
             encrypted_blocks = ciphertext.split('|')
+            num_blocks = len([b for b in encrypted_blocks if b])
+            app_logger.add_step("STEP", f"Znaleziono {num_blocks} bloków do deszyfrowania",
+                          {"liczba_bloków": num_blocks},
+                          explanation=f"Tekst został podzielony na {num_blocks} bloków.\n"
+                                    f"Każdy blok będzie deszyfrowany osobno używając klucza prywatnego.")
             
             decrypted_bytes = bytearray()
             
             # Maksymalny rozmiar bloku (w bajtach)
-            max_block_size = (private_key[0].bit_length() - 1) // 8
+            max_block_size = (n.bit_length() - 1) // 8
+            app_logger.add_step("STEP", f"Maksymalny rozmiar bloku: {max_block_size} bajtów",
+                          explanation=f"Maksymalny rozmiar bloku wynika z rozmiaru modułu n.\n"
+                                    f"Rozmiar bloku = (bit_length(n) - 1) // 8 = ({n.bit_length()} - 1) // 8 = {max_block_size} bajtów")
             
             # Deszyfruj każdy blok
+            block_num = 0
             for encrypted_hex in encrypted_blocks:
                 if not encrypted_hex:
                     continue
-                    
+                
+                block_num += 1
+                preview_hex = encrypted_hex[:30] + "..." if len(encrypted_hex) > 30 else encrypted_hex
+                
                 # Konwertuj hex na liczbę całkowitą
+                app_logger.add_step("STEP", f"Blok {block_num}/{num_blocks}: konwersja hex na liczbę całkowitą...",
+                                  {"blok_hex": preview_hex},
+                                  explanation=f"Blok {block_num}: {preview_hex}\n"
+                                            f"Konwersja z hex na liczbę całkowitą do deszyfrowania.")
                 encrypted_int = int(encrypted_hex, 16)
+                app_logger.add_step("STEP", f"Blok {block_num}: liczba całkowita = {encrypted_int}",
+                                  explanation=f"Blok {block_num} jako liczba całkowita: {encrypted_int}\n"
+                                            f"Ta wartość będzie deszyfrowana przez potęgowanie modularne.")
                 
                 # Deszyfruj blok
+                app_logger.add_step("STEP", f"Blok {block_num}: deszyfrowanie m = c^d mod n...",
+                                  explanation=f"Deszyfrowanie: m = {encrypted_int}^{d} mod {n}\n"
+                                            f"To jest potęgowanie modularne - obliczamy {encrypted_int} do potęgi {d} modulo {n}.\n"
+                                            f"Wynik będzie oryginalną wiadomością przed szyfrowaniem.")
                 decrypted_int = self.decrypt_block(encrypted_int, private_key)
+                decrypted_hex = hex(decrypted_int)[2:]
+                app_logger.add_step("STEP", f"Blok {block_num} odszyfrowany",
+                                  {"odszyfrowany_int": str(decrypted_int),
+                                   "odszyfrowany_hex": decrypted_hex[:30] + "..." if len(decrypted_hex) > 30 else decrypted_hex},
+                                  explanation=f"Blok {block_num} po deszyfrowaniu:\n"
+                                            f"Liczba całkowita: {decrypted_int}\n"
+                                            f"Hex: {decrypted_hex[:30]}...\n"
+                                            f"Ta wartość reprezentuje oryginalne bajty wiadomości.")
                 
                 # Oblicz rzeczywistą liczbę bajtów potrzebną do reprezentacji liczby
                 if decrypted_int == 0:
@@ -309,14 +433,39 @@ class RSA:
                 
                 # Konwertuj liczbę na bajty z dokładną liczbą bajtów
                 decrypted_block = decrypted_int.to_bytes(num_bytes, 'big')
-                
                 decrypted_bytes.extend(decrypted_block)
+                app_logger.add_step("STEP", f"Blok {block_num}: konwersja na {num_bytes} bajtów",
+                                  {"bajty_hex": decrypted_block.hex()[:30] + "..." if len(decrypted_block.hex()) > 30 else decrypted_block.hex()},
+                                  explanation=f"Blok {block_num} został przekształcony w {num_bytes} bajtów.\n"
+                                            f"Bajty (hex): {decrypted_block.hex()[:30]}...")
             
-            app_logger.info("RSA decryption completed successfully")
-            return decrypted_bytes.decode('utf-8')
+            app_logger.add_step("STEP", f"Odszyfrowano {num_blocks} bloków",
+                          explanation=f"Wszystkie {num_blocks} bloków zostały odszyfrowane.\n"
+                                    f"Otrzymano {len(decrypted_bytes)} bajtów danych.")
+            
+            # Konwersja na tekst
+            app_logger.add_step("STEP", "Konwersja bajtów na tekst UTF-8...",
+                          explanation="Bajty są konwertowane z powrotem na tekst używając kodowania UTF-8.")
+            decrypted_text = decrypted_bytes.decode('utf-8')
+            preview_result = decrypted_text[:30] + "..." if len(decrypted_text) > 30 else decrypted_text
+            app_logger.add_step("INFO", f"Długość odszyfrowanego tekstu: {len(decrypted_text)} znaków",
+                          {"przykład_wyniku": preview_result},
+                          explanation=f"Bajty zostały przekształcone w tekst UTF-8.\n"
+                                    f"Odszyfrowany tekst: '{preview_result}'")
+            
+            result_summary = f"Odszyfrowano {len(ciphertext)} znaków hex do {len(decrypted_text)} znaków tekstu"
+            app_logger.add_step("SUCCESS", "Deszyfrowanie zakończone",
+                          explanation=f"RSA-{self.key_size} deszyfrowanie zakończone pomyślnie.\n"
+                                    f"Zaszyfrowany tekst: '{preview_cipher}'\n"
+                                    f"Odszyfrowany tekst: '{preview_result}'\n"
+                                    f"Wszystkie {num_blocks} bloków zostały poprawnie odszyfrowane używając klucza prywatnego.")
+            app_logger.finish_operation(True, result_summary)
+            
+            return decrypted_text
             
         except Exception as e:
-            app_logger.error(f"RSA decryption failed: {str(e)}")
+            app_logger.add_step("ERROR", f"Błąd podczas deszyfrowania: {str(e)}")
+            app_logger.finish_operation(False, f"Błąd: {str(e)}")
             raise
     
     def encrypt_file(self, input_file: str, output_file: str, public_key: Tuple[int, int]) -> bool:

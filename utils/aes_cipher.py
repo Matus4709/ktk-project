@@ -6,9 +6,7 @@ Implementacja szyfru AES od podstaw bez korzystania z gotowych bibliotek
 import os
 import hashlib
 from typing import List, Tuple
-from utils.logger import AppLogger
-
-app_logger = AppLogger()
+from utils.logger import app_logger
 
 class AES:
     """
@@ -399,33 +397,119 @@ class AES:
             Zaszyfrowany tekst (hex)
         """
         try:
-            app_logger.info(f"AES encryption started for text of length {len(plaintext)}")
+            app_logger.start_operation(f"AES-{self.key_size} Szyfrowanie Tekstu", "AES", "encrypt")
+            
+            preview_text = plaintext[:30] + "..." if len(plaintext) > 30 else plaintext
+            app_logger.add_step("INFO", f"Długość tekstu wejściowego: {len(plaintext)} znaków",
+                          {"przykład_tekstu": preview_text},
+                          explanation=f"AES (Advanced Encryption Standard) to symetryczny szyfr blokowy.\n"
+                                    f"Tekst jest dzielony na bloki po 16 bajtów (128 bitów) i każdy blok jest szyfrowany osobno.\n"
+                                    f"Używamy wariantu AES-{self.key_size}, który wykonuje {self.n_rounds} rund szyfrowania.")
+            
+            app_logger.add_step("INFO", f"Rozmiar klucza: {self.key_size} bitów",
+                          explanation=f"Klucz {self.key_size}-bitowy jest rozszerzany do {self.n_rounds + 1} kluczy rundowych.\n"
+                                    f"Każda runda używa innego klucza wygenerowanego z oryginalnego klucza.")
             
             # Generowanie klucza z hasła
+            app_logger.add_step("STEP", "Generowanie klucza z hasła użytkownika...",
+                          explanation=f"Hasło użytkownika jest hashowane funkcją SHA-256, aby uzyskać deterministyczny klucz.\n"
+                                    f"Z 256-bitowego hasha bierzemy pierwsze {self.key_size // 8} bajtów jako klucz AES.")
             key_bytes = hashlib.sha256(key.encode()).digest()[:self.key_size // 8]
+            key_hex = key_bytes.hex()[:32] + "..." if len(key_bytes.hex()) > 32 else key_bytes.hex()
+            app_logger.add_step("STEP", f"Klucz wygenerowany: {len(key_bytes)} bajtów", 
+                              {"długość_klucza": f"{len(key_bytes)} bajtów",
+                               "klucz_hex": key_hex},
+                          explanation=f"Klucz został wygenerowany z hasła '{key[:10]}...'.\n"
+                                    f"Klucz w formacie hex: {key_hex}\n"
+                                    f"Ten klucz będzie używany do generowania kluczy rundowych.")
             
             # Padding danych
+            app_logger.add_step("STEP", "Konwersja tekstu na bajty i dodawanie paddingu PKCS#7...",
+                          explanation="PKCS#7 padding dodaje bajty na końcu danych, aby ich długość była wielokrotnością 16.\n"
+                                    "Wartość każdego bajtu paddingu równa się liczbie dodanych bajtów.\n"
+                                    "Przykład: jeśli brakuje 3 bajtów, dodajemy bajty 0x03 0x03 0x03")
             data = plaintext.encode('utf-8')
+            original_length = len(data)
             padded_data = self._pad_data(data)
+            padding_length = len(padded_data) - original_length
+            preview_data = ' '.join(f'{b:02x}' for b in data[:16]) + ("..." if len(data) > 16 else "")
+            preview_padded = ' '.join(f'{b:02x}' for b in padded_data[:16]) + ("..." if len(padded_data) > 16 else "")
+            app_logger.add_step("STEP", f"Dane po paddingu: {len(padded_data)} bajtów", 
+                              {"długość_przed": f"{original_length} bajtów",
+                               "długość_po": f"{len(padded_data)} bajtów",
+                               "padding": f"{padding_length} bajtów",
+                               "przykład_danych": preview_data,
+                               "przykład_z_paddingiem": preview_padded},
+                          explanation=f"Tekst '{preview_text}' został przekształcony w {original_length} bajtów.\n"
+                                    f"Dodano {padding_length} bajtów paddingu, aby uzyskać {len(padded_data)} bajtów (wielokrotność 16).\n"
+                                    f"Przykład danych: {preview_data}\n"
+                                    f"Po paddingu: {preview_padded}")
             
             # Rozszerzanie klucza
+            app_logger.add_step("STEP", "Rozszerzanie klucza (Key Expansion)...",
+                          explanation=f"Key Expansion generuje {self.n_rounds + 1} kluczy rundowych z oryginalnego klucza.\n"
+                                    f"Każdy klucz rundowy jest używany w innej rundzie szyfrowania.\n"
+                                    f"Proces używa operacji SubBytes, RotWord, Rcon do generowania nowych kluczy.")
             round_keys = self._key_expansion(key_bytes)
+            app_logger.add_step("STEP", f"Wygenerowano {len(round_keys)} kluczy rundowych",
+                          {"liczba_rund": self.n_rounds,
+                           "liczba_kluczy": len(round_keys)},
+                          explanation=f"Z klucza {self.key_size}-bitowego wygenerowano {len(round_keys)} kluczy rundowych.\n"
+                                    f"Każda z {self.n_rounds} rund używa innego klucza rundowego.\n"
+                                    f"Klucze są generowane deterministycznie - ten sam klucz zawsze daje te same klucze rundowe.")
             
             # Szyfrowanie bloków
+            num_blocks = len(padded_data) // 16
+            app_logger.add_step("STEP", f"Szyfrowanie {num_blocks} bloków po 16 bajtów...",
+                          explanation=f"Każdy blok 16 bajtów jest szyfrowany przez {self.n_rounds} rund:\n"
+                                    "1. AddRoundKey - XOR z kluczem rundowym\n"
+                                    "2. SubBytes - zamiana bajtów przez S-box\n"
+                                    "3. ShiftRows - przesunięcie wierszy macierzy\n"
+                                    "4. MixColumns - mieszanie kolumn (oprócz ostatniej rundy)")
             encrypted_blocks = []
             for i in range(0, len(padded_data), 16):
                 block = padded_data[i:i+16]
+                block_hex = block.hex()
+                app_logger.add_step("STEP", f"Blok {i // 16 + 1}/{num_blocks}: szyfrowanie...",
+                                  {"blok_hex": block_hex},
+                                  explanation=f"Blok {i // 16 + 1}: {block_hex}\n"
+                                            f"Ten blok przejdzie przez {self.n_rounds} rund szyfrowania AES.")
                 encrypted_block = self._encrypt_block(block, round_keys)
+                encrypted_hex = encrypted_block.hex()
+                app_logger.add_step("STEP", f"Blok {i // 16 + 1} zaszyfrowany",
+                                  {"zaszyfrowany_hex": encrypted_hex},
+                                  explanation=f"Blok {i // 16 + 1} po szyfrowaniu: {encrypted_hex}\n"
+                                            f"Każdy bajt został przekształcony przez operacje AES.")
                 encrypted_blocks.append(encrypted_block)
+            app_logger.add_step("STEP", f"Zaszyfrowano {len(encrypted_blocks)} bloków",
+                          explanation=f"Wszystkie {len(encrypted_blocks)} bloków zostały zaszyfrowane.\n"
+                                    f"Każdy blok przeszedł przez {self.n_rounds} rund transformacji AES.")
             
             # Konwersja na hex
+            app_logger.add_step("STEP", "Konwersja zaszyfrowanych bloków na format hex...",
+                          explanation="Zaszyfrowane bajty są konwertowane na reprezentację szesnastkową (hex),\n"
+                                    "gdzie każdy bajt jest reprezentowany przez 2 znaki (0-9, a-f).")
             encrypted_hex = ''.join(block.hex() for block in encrypted_blocks)
+            preview_hex = encrypted_hex[:50] + "..." if len(encrypted_hex) > 50 else encrypted_hex
+            app_logger.add_step("INFO", f"Długość zaszyfrowanego tekstu: {len(encrypted_hex)} znaków hex",
+                          {"przykład_wyniku": preview_hex},
+                          explanation=f"Tekst '{preview_text}' został zaszyfrowany do {len(encrypted_hex)} znaków hex.\n"
+                                    f"Przykład zaszyfrowanego tekstu: {preview_hex}\n"
+                                    f"Każdy blok 16 bajtów = 32 znaki hex.")
             
-            app_logger.info(f"AES encryption completed successfully")
+            result_summary = f"Zaszyfrowano {len(plaintext)} znaków tekstu do {len(encrypted_hex)} znaków hex"
+            app_logger.add_step("SUCCESS", "Szyfrowanie zakończone",
+                          explanation=f"AES-{self.key_size} szyfrowanie zakończone pomyślnie.\n"
+                                    f"Tekst został podzielony na {num_blocks} bloków, każdy zaszyfrowany przez {self.n_rounds} rund.\n"
+                                    f"Oryginalny tekst: '{preview_text}'\n"
+                                    f"Zaszyfrowany tekst (hex): {preview_hex}")
+            app_logger.finish_operation(True, result_summary)
+            
             return encrypted_hex
             
         except Exception as e:
-            app_logger.error(f"AES encryption failed: {str(e)}")
+            app_logger.add_step("ERROR", f"Błąd podczas szyfrowania: {str(e)}")
+            app_logger.finish_operation(False, f"Błąd: {str(e)}")
             raise
     
     def decrypt(self, ciphertext: str, key: str) -> str:
@@ -440,33 +524,121 @@ class AES:
             Odszyfrowany tekst
         """
         try:
-            app_logger.info(f"AES decryption started for ciphertext of length {len(ciphertext)}")
+            app_logger.start_operation(f"AES-{self.key_size} Deszyfrowanie Tekstu", "AES", "decrypt")
+            
+            preview_cipher = ciphertext[:50] + "..." if len(ciphertext) > 50 else ciphertext
+            app_logger.add_step("INFO", f"Długość zaszyfrowanego tekstu: {len(ciphertext)} znaków hex",
+                          {"przykład_tekstu": preview_cipher},
+                          explanation=f"Deszyfrowanie AES wykonuje odwrotne operacje do szyfrowania.\n"
+                                    f"Zaszyfrowany tekst w formacie hex jest konwertowany z powrotem na bloki 16 bajtów.\n"
+                                    f"Każdy blok przechodzi przez {self.n_rounds} rund deszyfrowania w odwrotnej kolejności.")
+            
+            app_logger.add_step("INFO", f"Rozmiar klucza: {self.key_size} bitów",
+                          explanation=f"Używamy tego samego klucza co przy szyfrowaniu.\n"
+                                    f"Klucz jest rozszerzany do {self.n_rounds + 1} kluczy rundowych w tej samej kolejności.")
             
             # Generowanie klucza z hasła
+            app_logger.add_step("STEP", "Generowanie klucza z hasła użytkownika...",
+                          explanation=f"Hasło jest hashowane funkcją SHA-256 w ten sam sposób co przy szyfrowaniu.\n"
+                                    f"Ten sam hasło daje ten sam klucz, co jest wymagane do poprawnego deszyfrowania.")
             key_bytes = hashlib.sha256(key.encode()).digest()[:self.key_size // 8]
+            key_hex = key_bytes.hex()[:32] + "..." if len(key_bytes.hex()) > 32 else key_bytes.hex()
+            app_logger.add_step("STEP", f"Klucz wygenerowany: {len(key_bytes)} bajtów",
+                          {"klucz_hex": key_hex},
+                          explanation=f"Klucz został wygenerowany z hasła '{key[:10]}...'.\n"
+                                    f"Klucz w formacie hex: {key_hex}")
             
             # Konwersja hex na bajty
+            app_logger.add_step("STEP", "Konwersja tekstu hex na bajty...",
+                          explanation="Tekst hex jest konwertowany z powrotem na bajty.\n"
+                                    "Każde 2 znaki hex reprezentują 1 bajt (np. '41' = 0x41 = 65 = 'A').")
             cipher_bytes = bytes.fromhex(ciphertext)
+            num_blocks = len(cipher_bytes) // 16
+            preview_bytes = ' '.join(f'{b:02x}' for b in cipher_bytes[:16]) + ("..." if len(cipher_bytes) > 16 else "")
+            app_logger.add_step("STEP", f"Otrzymano {len(cipher_bytes)} bajtów danych", 
+                              {"liczba_bloków": f"{num_blocks}",
+                               "przykładowe_bajty": preview_bytes},
+                          explanation=f"Tekst hex '{preview_cipher}' został przekształcony w {len(cipher_bytes)} bajtów.\n"
+                                    f"Utworzono {num_blocks} bloków po 16 bajtów.\n"
+                                    f"Przykładowe bajty (hex): {preview_bytes}")
             
             # Rozszerzanie klucza
+            app_logger.add_step("STEP", "Rozszerzanie klucza (Key Expansion)...",
+                          explanation=f"Key Expansion generuje te same {self.n_rounds + 1} kluczy rundowych co przy szyfrowaniu.\n"
+                                    f"Klucze są używane w odwrotnej kolejności podczas deszyfrowania.")
             round_keys = self._key_expansion(key_bytes)
+            app_logger.add_step("STEP", f"Wygenerowano {len(round_keys)} kluczy rundowych",
+                          explanation=f"Wygenerowano {len(round_keys)} kluczy rundowych.\n"
+                                    f"Będą używane w odwrotnej kolejności: od klucza rundy {self.n_rounds} do klucza rundy 0.")
             
             # Deszyfrowanie bloków
+            app_logger.add_step("STEP", f"Deszyfrowanie {num_blocks} bloków po 16 bajtów...",
+                          explanation=f"Każdy blok 16 bajtów jest deszyfrowany przez {self.n_rounds} rund w odwrotnej kolejności:\n"
+                                    f"1. InvShiftRows - odwrotne przesunięcie wierszy\n"
+                                    f"2. InvSubBytes - odwrotna zamiana bajtów przez InvS-box\n"
+                                    f"3. InvMixColumns - odwrotne mieszanie kolumn (oprócz pierwszej rundy)\n"
+                                    f"4. AddRoundKey - XOR z kluczem rundowym")
             decrypted_blocks = []
             for i in range(0, len(cipher_bytes), 16):
                 block = cipher_bytes[i:i+16]
+                block_num = i // 16 + 1
+                block_hex = block.hex()
+                app_logger.add_step("STEP", f"Blok {block_num}/{num_blocks}: deszyfrowanie...",
+                                  {"blok_hex": block_hex},
+                                  explanation=f"Blok {block_num}: {block_hex}\n"
+                                            f"Ten blok przejdzie przez {self.n_rounds} rund deszyfrowania AES w odwrotnej kolejności.")
                 decrypted_block = self._decrypt_block(block, round_keys)
+                decrypted_hex = decrypted_block.hex()
+                app_logger.add_step("STEP", f"Blok {block_num} odszyfrowany",
+                                  {"odszyfrowany_hex": decrypted_hex},
+                                  explanation=f"Blok {block_num} po deszyfrowaniu: {decrypted_hex}\n"
+                                            f"Każdy bajt został przekształcony przez odwrotne operacje AES.")
                 decrypted_blocks.append(decrypted_block)
+            app_logger.add_step("STEP", f"Odszyfrowano {len(decrypted_blocks)} bloków",
+                          explanation=f"Wszystkie {len(decrypted_blocks)} bloków zostały odszyfrowane.\n"
+                                    f"Każdy blok przeszedł przez {self.n_rounds} rund odwrotnych transformacji AES.")
             
             # Łączenie bloków i usuwanie paddingu
+            app_logger.add_step("STEP", "Łączenie bloków i usuwanie paddingu PKCS#7...",
+                          explanation="Bloki są łączone, a następnie usuwany jest padding PKCS#7.\n"
+                                    "Ostatni bajt wskazuje ile bajtów paddingu należy usunąć.")
             decrypted_data = b''.join(decrypted_blocks)
             unpadded_data = self._unpad_data(decrypted_data)
+            padding_removed = len(decrypted_data) - len(unpadded_data)
+            preview_unpadded = ' '.join(f'{b:02x}' for b in unpadded_data[:16]) + ("..." if len(unpadded_data) > 16 else "")
+            app_logger.add_step("STEP", f"Usunięto padding, długość danych: {len(unpadded_data)} bajtów",
+                          {"długość_przed": f"{len(decrypted_data)} bajtów",
+                           "długość_po": f"{len(unpadded_data)} bajtów",
+                           "padding_usunięty": f"{padding_removed} bajtów",
+                           "przykład_danych": preview_unpadded},
+                          explanation=f"Usunięto {padding_removed} bajtów paddingu.\n"
+                                    f"Długość danych przed usunięciem: {len(decrypted_data)} bajtów\n"
+                                    f"Długość danych po usunięciu: {len(unpadded_data)} bajtów\n"
+                                    f"Przykład danych: {preview_unpadded}")
             
-            app_logger.info(f"AES decryption completed successfully")
-            return unpadded_data.decode('utf-8')
+            # Konwersja na tekst
+            app_logger.add_step("STEP", "Konwersja bajtów na tekst UTF-8...",
+                          explanation="Bajty są konwertowane z powrotem na tekst używając kodowania UTF-8.")
+            decrypted_text = unpadded_data.decode('utf-8')
+            preview_result = decrypted_text[:30] + "..." if len(decrypted_text) > 30 else decrypted_text
+            app_logger.add_step("INFO", f"Długość odszyfrowanego tekstu: {len(decrypted_text)} znaków",
+                          {"przykład_wyniku": preview_result},
+                          explanation=f"Bajty zostały przekształcone w tekst UTF-8.\n"
+                                    f"Odszyfrowany tekst: '{preview_result}'")
+            
+            result_summary = f"Odszyfrowano {len(ciphertext)} znaków hex do {len(decrypted_text)} znaków tekstu"
+            app_logger.add_step("SUCCESS", "Deszyfrowanie zakończone",
+                          explanation=f"AES-{self.key_size} deszyfrowanie zakończone pomyślnie.\n"
+                                    f"Zaszyfrowany tekst: '{preview_cipher}'\n"
+                                    f"Odszyfrowany tekst: '{preview_result}'\n"
+                                    f"Wszystkie {num_blocks} bloków zostały poprawnie odszyfrowane.")
+            app_logger.finish_operation(True, result_summary)
+            
+            return decrypted_text
             
         except Exception as e:
-            app_logger.error(f"AES decryption failed: {str(e)}")
+            app_logger.add_step("ERROR", f"Błąd podczas deszyfrowania: {str(e)}")
+            app_logger.finish_operation(False, f"Błąd: {str(e)}")
             raise
     
     def encrypt_file(self, input_file: str, output_file: str, key: str) -> bool:

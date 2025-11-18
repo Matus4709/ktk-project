@@ -398,11 +398,26 @@ class AESEncryptTextWindow(QMainWindow):
             app_logger.info("AES text encryption completed successfully")
             QMessageBox.information(self, "Sukces", "Tekst został zaszyfrowany pomyślnie!")
             
+            # Pokaż okno logów
+            self.show_log_window()
+            
         except Exception as e:
             app_logger.error(f"AES encryption finish error: {str(e)}")
             QMessageBox.critical(self, "Błąd", f"Wystąpił błąd:\n{str(e)}")
             self.encrypt_button.setEnabled(True)
             self.encrypt_button.setText("🔐 Szyfruj")
+            
+            # Pokaż okno logów nawet w przypadku błędu
+            self.show_log_window()
+    
+    def show_log_window(self):
+        """Wyświetla okno logów operacji"""
+        try:
+            from views.log_viewer_window import LogViewerWindow
+            self.log_window = LogViewerWindow(self)
+            self.log_window.show()
+        except Exception as e:
+            app_logger.error(f"Error showing log window: {str(e)}")
     
     def on_encryption_error(self, error_msg):
         """Obsługuje błąd szyfrowania"""
@@ -410,6 +425,9 @@ class AESEncryptTextWindow(QMainWindow):
         QMessageBox.critical(self, "Błąd szyfrowania", f"Wystąpił błąd podczas szyfrowania:\n{error_msg}")
         self.encrypt_button.setEnabled(True)
         self.encrypt_button.setText("🔐 Szyfruj")
+        
+        # Pokaż okno logów
+        self.show_log_window()
     
     def copy_result(self):
         """Kopiuje wynik do schowka"""

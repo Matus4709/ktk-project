@@ -469,11 +469,19 @@ class RSADecryptTextWindow(QMainWindow):
             app_logger.info("RSA text decryption completed successfully")
             QMessageBox.information(self, "Sukces", "Tekst został odszyfrowany pomyślnie!")
             
+            # Pokaż okno logów
+            from views.log_window_helper import show_log_window
+            show_log_window(self)
+            
         except Exception as e:
             app_logger.error(f"RSA decryption finish error: {str(e)}")
             QMessageBox.critical(self, "Błąd", f"Wystąpił błąd:\n{str(e)}")
             self.decrypt_button.setEnabled(True)
             self.decrypt_button.setText("🔓 Deszyfruj")
+            
+            # Pokaż okno logów
+            from views.log_window_helper import show_log_window
+            show_log_window(self)
     
     def on_decryption_error(self, error_msg):
         """Obsługuje błąd deszyfrowania"""
@@ -481,6 +489,10 @@ class RSADecryptTextWindow(QMainWindow):
         QMessageBox.critical(self, "Błąd deszyfrowania", f"Wystąpił błąd podczas deszyfrowania:\n{error_msg}")
         self.decrypt_button.setEnabled(True)
         self.decrypt_button.setText("🔓 Deszyfruj")
+        
+        # Pokaż okno logów
+        from views.log_window_helper import show_log_window
+        show_log_window(self)
     
     def copy_result(self):
         """Kopiuje wynik do schowka"""

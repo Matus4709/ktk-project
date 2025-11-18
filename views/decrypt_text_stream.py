@@ -236,12 +236,22 @@ class DecryptTextStreamWindow(QMainWindow):
             QMessageBox.information(self, "Sukces", 
                 "Tekst został odszyfrowany szyfrem z kluczem bieżącym!")
             
+            # Pokaż okno logów
+            from views.log_window_helper import show_log_window
+            show_log_window(self)
+            
         except ValueError as e:
             app_logger.log_validation_error("tekst", "nieprawidłowy format hex")
             QMessageBox.warning(self, "Błąd", "Nieprawidłowy format hex lub nieprawidłowy klucz!")
+            # Pokaż okno logów
+            from views.log_window_helper import show_log_window
+            show_log_window(self)
         except Exception as e:
             app_logger.log_error("deszyfrowanie tekstu", str(e))
             QMessageBox.critical(self, "Błąd", f"Wystąpił błąd podczas deszyfrowania: {str(e)}")
+            # Pokaż okno logów
+            from views.log_window_helper import show_log_window
+            show_log_window(self)
             
     def clear_fields(self):
         """Czyści wszystkie pola"""

@@ -231,10 +231,17 @@ class DecryptTextWindow(QMainWindow):
             QMessageBox.information(self, "Sukces", 
                 f"Tekst został odszyfrowany szyfrem Cezara z przesunięciem {shift}!")
             
+            # Pokaż okno logów
+            from views.log_window_helper import show_log_window
+            show_log_window(self)
+            
         except ValueError:
             QMessageBox.warning(self, "Błąd", "Przesunięcie musi być liczbą całkowitą!")
         except Exception as e:
             QMessageBox.critical(self, "Błąd", f"Wystąpił błąd podczas deszyfrowania: {str(e)}")
+            # Pokaż okno logów nawet w przypadku błędu
+            from views.log_window_helper import show_log_window
+            show_log_window(self)
             
     def clear_fields(self):
         """Czyści wszystkie pola"""
