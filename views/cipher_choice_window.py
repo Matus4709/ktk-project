@@ -201,6 +201,32 @@ class CipherChoiceWindow(QMainWindow):
         """)
         self.rsa_btn.clicked.connect(self.open_rsa_window)
         options_layout.addWidget(self.rsa_btn, 1, 1)
+
+        # ECDH
+        self.ecdh_btn = QPushButton("🤝 ECDH")
+        self.ecdh_btn.setMinimumSize(200, 150)
+        self.ecdh_btn.setFont(QFont("Arial", 16, QFont.Bold))
+        self.ecdh_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #1abc9c, stop:1 #16a085);
+                color: white;
+                border: none;
+                border-radius: 15px;
+                padding: 20px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #16a085, stop:1 #13856f);
+                transform: scale(1.05);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #13856f, stop:1 #0f5f4c);
+            }
+        """)
+        self.ecdh_btn.clicked.connect(self.open_ecdh_window)
+        options_layout.addWidget(self.ecdh_btn, 1, 2)
         
         # # Opcja AES (wkrótce)
         # aes_option_layout = QHBoxLayout()
@@ -398,6 +424,13 @@ class CipherChoiceWindow(QMainWindow):
                 from .decrypt_file_rsa import RSADecryptFileWindow
                 self.cipher_window = RSADecryptFileWindow(self)
         
+        self.cipher_window.show()
+        self.hide()
+
+    def open_ecdh_window(self):
+        """Otwiera moduł wymiany kluczy ECDH"""
+        from .ecdh_window import ECDHWindow
+        self.cipher_window = ECDHWindow(self)
         self.cipher_window.show()
         self.hide()
         

@@ -102,7 +102,13 @@ class AppLogger:
                            "Każdy bajt tekstu jest szyfrowany przez operację XOR z odpowiadającym bajtem strumienia klucza.\n"
                            "Strumień klucza jest generowany deterministycznie z ziarna używając funkcji hash (SHA-256).\n"
                            "XOR ma właściwość: (A XOR B) XOR B = A, co pozwala na łatwe deszyfrowanie.\n"
-                           "Szyfry strumieniowe są szybkie i efektywne, używane w komunikacji w czasie rzeczywistym."
+                           "Szyfry strumieniowe są szybkie i efektywne, używane w komunikacji w czasie rzeczywistym.",
+
+            "ECDH": "ECDH (Elliptic Curve Diffie-Hellman) to protokół uzgadniania klucza.\n"
+                    "Dwóch uczestników wymienia klucze publiczne z krzywej eliptycznej i mnoży je przez swoje klucze prywatne.\n"
+                    "Wynikowe punkty są identyczne i stanowią wspólny sekret, który można przekształcić w klucz symetryczny.\n"
+                    "Bezpieczeństwo wynika z trudności rozwiązania problemu logarytmu dyskretnego na krzywych eliptycznych.\n"
+                    "W praktyce sekret jest dodatkowo przepuszczany przez HKDF, aby uzyskać jednorodny klucz dla AES lub HMAC."
         }
         
         self.add_step("START", f"Rozpoczęto operację: {operation_name}")
