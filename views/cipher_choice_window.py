@@ -227,6 +227,32 @@ class CipherChoiceWindow(QMainWindow):
         """)
         self.ecdh_btn.clicked.connect(self.open_ecdh_window)
         options_layout.addWidget(self.ecdh_btn, 1, 2)
+
+        # Podwójna transpozycja kolumnowa
+        self.double_transposition_btn = QPushButton("🧩 Podwójna\ntranspozycja")
+        self.double_transposition_btn.setMinimumSize(200, 150)
+        self.double_transposition_btn.setFont(QFont("Arial", 16, QFont.Bold))
+        self.double_transposition_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #1abc9c, stop:1 #148f77);
+                color: white;
+                border: none;
+                border-radius: 15px;
+                padding: 20px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #148f77, stop:1 #0e6655);
+                transform: scale(1.05);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #0e6655, stop:1 #0b5345);
+            }
+        """)
+        self.double_transposition_btn.clicked.connect(self.open_double_transposition_window)
+        options_layout.addWidget(self.double_transposition_btn, 2, 0)
         
         # # Opcja AES (wkrótce)
         # aes_option_layout = QHBoxLayout()
@@ -431,6 +457,38 @@ class CipherChoiceWindow(QMainWindow):
         """Otwiera moduł wymiany kluczy ECDH"""
         from .ecdh_window import ECDHWindow
         self.cipher_window = ECDHWindow(self)
+        self.cipher_window.show()
+        self.hide()
+
+    def open_double_transposition_window(self):
+        """Otwiera nowe okna szyfru podwójnej transpozycji"""
+        if self.data_type == "text":
+            if self.operation_type == "encrypt":
+                from .encrypt_text_double_transposition import (
+                    EncryptTextDoubleTranspositionWindow,
+                )
+
+                self.cipher_window = EncryptTextDoubleTranspositionWindow(self)
+            else:
+                from .decrypt_text_double_transposition import (
+                    DecryptTextDoubleTranspositionWindow,
+                )
+
+                self.cipher_window = DecryptTextDoubleTranspositionWindow(self)
+        else:  # file
+            if self.operation_type == "encrypt":
+                from .encrypt_file_double_transposition import (
+                    EncryptFileDoubleTranspositionWindow,
+                )
+
+                self.cipher_window = EncryptFileDoubleTranspositionWindow(self)
+            else:
+                from .decrypt_file_double_transposition import (
+                    DecryptFileDoubleTranspositionWindow,
+                )
+
+                self.cipher_window = DecryptFileDoubleTranspositionWindow(self)
+
         self.cipher_window.show()
         self.hide()
         
