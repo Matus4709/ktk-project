@@ -228,6 +228,32 @@ class CipherChoiceWindow(QMainWindow):
         self.ecdh_btn.clicked.connect(self.open_ecdh_window)
         options_layout.addWidget(self.ecdh_btn, 1, 2)
 
+        # SHA-256 hash/weryfikacja
+        self.sha_btn = QPushButton("SHA-256\nhash/weryfikacja")
+        self.sha_btn.setMinimumSize(200, 150)
+        self.sha_btn.setFont(QFont("Arial", 16, QFont.Bold))
+        self.sha_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #34495e, stop:1 #2c3e50);
+                color: white;
+                border: none;
+                border-radius: 15px;
+                padding: 20px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #2c3e50, stop:1 #22313f);
+                transform: scale(1.05);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #22313f, stop:1 #1b2733);
+            }
+        """)
+        self.sha_btn.clicked.connect(self.open_sha_window)
+        options_layout.addWidget(self.sha_btn, 2, 1)
+
         # Podwójna transpozycja kolumnowa
         self.double_transposition_btn = QPushButton("🧩 Podwójna\ntranspozycja")
         self.double_transposition_btn.setMinimumSize(200, 150)
@@ -457,6 +483,17 @@ class CipherChoiceWindow(QMainWindow):
         """Otwiera moduł wymiany kluczy ECDH"""
         from .ecdh_window import ECDHWindow
         self.cipher_window = ECDHWindow(self)
+        self.cipher_window.show()
+        self.hide()
+
+    def open_sha_window(self):
+        """Otwiera okna hash/weryfikacji SHA-256"""
+        if self.data_type == "text":
+            from .hash_text_sha256 import Sha256TextWindow
+            self.cipher_window = Sha256TextWindow(self)
+        else:
+            from .hash_file_sha256 import Sha256FileWindow
+            self.cipher_window = Sha256FileWindow(self)
         self.cipher_window.show()
         self.hide()
 

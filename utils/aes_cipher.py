@@ -166,7 +166,7 @@ class AESCipher:
         except Exception as exc:
             app_logger.error(f"AES file encryption error: {exc}")
             return False
-
+    
     def decrypt_file(self, input_file: str, output_file: str, password: str) -> bool:
         try:
             with open(input_file, "rb") as f_in:
