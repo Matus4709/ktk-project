@@ -21,17 +21,18 @@ class AESFileEncryptWorker(QThread):
     error = pyqtSignal(str)
     progress = pyqtSignal(int)
     
-    def __init__(self, input_file, output_file, key, key_size):
+    def __init__(self, input_file, output_file, key, key_size, mode):
         super().__init__()
         self.input_file = input_file
         self.output_file = output_file
         self.key = key
         self.key_size = key_size
+        self.mode = mode
     
     def run(self):
         try:
             self.progress.emit(10)
-            result = aes_encrypt_file(self.input_file, self.output_file, self.key, self.key_size)
+            result = aes_encrypt_file(self.input_file, self.output_file, self.key, self.key_size, self.mode)
             self.progress.emit(100)
             self.finished.emit(result)
         except Exception as e:
@@ -267,6 +268,43 @@ class AESEncryptFileWindow(QMainWindow):
         key_size_layout.addStretch()
         
         key_layout.addLayout(key_size_layout)
+
+        # Tryb pracy
+        mode_layout = QHBoxLayout()
+        mode_label = QLabel("⚙️ Tryb pracy AES:")
+        mode_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
+        mode_layout.addWidget(mode_label)
+
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItems(["CBC", "GCM", "CTR", "ECB"])
+        self.mode_combo.setCurrentIndex(0)
+        self.mode_combo.setStyleSheet("""
+            QComboBox {
+                border: 2px solid #dee2e6;
+                border-radius: 8px;
+                padding: 8px;
+                font-size: 14px;
+                background-color: white;
+                min-width: 200px;
+            }
+            QComboBox:focus {
+                border-color: #007bff;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 5px solid #6c757d;
+                margin-right: 10px;
+            }
+        """)
+        mode_layout.addWidget(self.mode_combo)
+        mode_layout.addStretch()
+
+        key_layout.addLayout(mode_layout)
         main_layout.addWidget(key_frame)
         
         # Pasek postępu
@@ -392,6 +430,10 @@ class AESEncryptFileWindow(QMainWindow):
         elif "256" in selection:
             return 256
         return 128
+
+    def get_mode(self):
+        """Pobiera wybrany tryb pracy AES"""
+        return self.mode_combo.currentText().upper()
     
     def browse_input_file(self):
         """Otwiera dialog wyboru pliku wejściowego"""
@@ -469,13 +511,18 @@ class AESEncryptFileWindow(QMainWindow):
             self.progress_bar.setValue(0)
             
             # Uruchomienie wątku szyfrowania
-            self.worker = AESFileEncryptWorker(input_file, output_file, key, self.get_key_size())
+            self.worker = AESFileEncryptWorker(
+                input_file, output_file, key, self.get_key_size(), self.get_mode()
+            )
             self.worker.finished.connect(self.on_encryption_finished)
             self.worker.error.connect(self.on_encryption_error)
             self.worker.progress.connect(self.progress_bar.setValue)
             self.worker.start()
             
-            app_logger.info(f"AES file encryption started: {input_file} -> {output_file}")
+            app_logger.info(
+                f"AES file encryption started: {input_file} -> {output_file}, "
+                f"key size {self.get_key_size()}, mode {self.get_mode()}"
+            )
             
         except Exception as e:
             app_logger.error(f"AES file encryption error: {str(e)}")

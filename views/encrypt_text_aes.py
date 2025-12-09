@@ -19,15 +19,16 @@ class AESEncryptWorker(QThread):
     finished = pyqtSignal(str)
     error = pyqtSignal(str)
     
-    def __init__(self, text, key, key_size):
+    def __init__(self, text, key, key_size, mode):
         super().__init__()
         self.text = text
         self.key = key
         self.key_size = key_size
+        self.mode = mode
     
     def run(self):
         try:
-            result = aes_encrypt_text(text, key, key_size)
+            result = aes_encrypt_text(self.text, self.key, self.key_size, self.mode)
             self.finished.emit(result)
         except Exception as e:
             self.error.emit(str(e))
@@ -178,6 +179,43 @@ class AESEncryptTextWindow(QMainWindow):
         key_size_layout.addStretch()
         
         key_layout.addLayout(key_size_layout)
+
+        # Tryb pracy
+        mode_layout = QHBoxLayout()
+        mode_label = QLabel("⚙️ Tryb pracy AES:")
+        mode_label.setStyleSheet("font-weight: bold; color: #2c3e50;")
+        mode_layout.addWidget(mode_label)
+
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItems(["CBC", "GCM", "CTR", "ECB"])
+        self.mode_combo.setCurrentIndex(0)
+        self.mode_combo.setStyleSheet("""
+            QComboBox {
+                border: 2px solid #dee2e6;
+                border-radius: 8px;
+                padding: 8px;
+                font-size: 14px;
+                background-color: white;
+                min-width: 200px;
+            }
+            QComboBox:focus {
+                border-color: #007bff;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 5px solid #6c757d;
+                margin-right: 10px;
+            }
+        """)
+        mode_layout.addWidget(self.mode_combo)
+        mode_layout.addStretch()
+
+        key_layout.addLayout(mode_layout)
         main_layout.addWidget(key_frame)
         
         # Przyciski
@@ -354,6 +392,10 @@ class AESEncryptTextWindow(QMainWindow):
         elif "256" in selection:
             return 256
         return 128
+
+    def get_mode(self):
+        """Pobiera wybrany tryb pracy AES"""
+        return self.mode_combo.currentText().upper()
     
     def encrypt_text(self):
         """Szyfruje tekst"""
@@ -374,12 +416,12 @@ class AESEncryptTextWindow(QMainWindow):
             self.encrypt_button.setText("⏳ Szyfrowanie...")
             
             # Uruchomienie wątku szyfrowania
-            self.worker = AESEncryptWorker(text, key, self.get_key_size())
+            self.worker = AESEncryptWorker(text, key, self.get_key_size(), self.get_mode())
             self.worker.finished.connect(self.on_encryption_finished)
             self.worker.error.connect(self.on_encryption_error)
             self.worker.start()
             
-            app_logger.info(f"AES text encryption started with key size {self.get_key_size()}")
+            app_logger.info(f"AES text encryption started with key size {self.get_key_size()} mode {self.get_mode()}")
             
         except Exception as e:
             app_logger.error(f"AES text encryption error: {str(e)}")
